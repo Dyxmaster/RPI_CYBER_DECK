@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>树莓派中枢系统 // V5.0 Pro</title>
-    <!-- 引入公共样式 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
-    <!-- 引入导航栏样式 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/nav.css') }}">
-    <!-- 临时增加按钮和布局样式 -->
     <style>
+        /* ... (保留原有样式) ... */
         .power-btn {
             background: transparent;
             border: 1px solid var(--danger);
@@ -55,6 +53,88 @@
                 grid-column: span 2;
             }
         }
+
+        /* --- 自定义模态对话框样式 --- */
+        .custom-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85); /* 半透明黑色背景 */
+            display: none; /* 默认隐藏 */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* 确保在最上层 */
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .custom-modal.visible {
+            display: flex;
+            opacity: 1;
+        }
+        .modal-content {
+            background-color: var(--background-darker); /* 假设你的背景色 */
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 5px;
+            color: #fff;
+            text-align: center;
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-title {
+            font-size: 1.5em;
+            color: var(--yellow);
+            margin-bottom: 10px;
+        }
+        .modal-message {
+            font-size: 1em;
+            color: var(--text-light);
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        .modal-actions button {
+            padding: 8px 20px;
+            margin: 0 10px;
+            cursor: pointer;
+            font-weight: bold;
+            border: none;
+            border-radius: 3px;
+            transition: 0.2s;
+        }
+        .modal-btn-confirm {
+            background-color: var(--danger);
+            color: #fff;
+        }
+        .modal-btn-confirm:hover {
+            background-color: #ff4d4f;
+        }
+        .modal-btn-cancel {
+            background-color: #555;
+            color: #eee;
+        }
+        .modal-btn-cancel:hover {
+            background-color: #666;
+        }
+        /* 针对操作结果的提示 */
+        .modal-result .modal-title {
+            color: var(--primary);
+        }
+        .modal-result .modal-btn-cancel { /* '确定' 按钮使用取消按钮的样式 */
+            background-color: var(--primary);
+            color: #fff;
+        }
+        .modal-result .modal-btn-cancel:hover {
+            background-color: #00bcd4;
+        }
     </style>
 </head>
 <body>
@@ -63,7 +143,6 @@
 
     <div class="container">
         
-        <!-- 引用公共导航栏 -->
         {% include 'nav.html' %}
 
         <main class="main-content">
@@ -71,18 +150,14 @@
             <div id="dashboard" class="page active">
                 <header>
                     <h2>实时硬件监控</h2>
-                    <!-- 关机/重启按钮 -->
                     <div class="header-actions">
-                        <button class="power-btn reboot" onclick="sysAction('reboot')">⚡ 重启系统</button>
-                        <button class="power-btn" onclick="sysAction('shutdown')">🛑 立即关机</button>
+                        <button class="power-btn reboot" onclick="showSysConfirm('reboot')">⚡ 重启系统</button>
+                        <button class="power-btn" onclick="showSysConfirm('shutdown')">🛑 立即关机</button>
                         <div class="live-tag" style="margin-left: 15px;">LIVE DATA</div>
                     </div>
                 </header>
 
-                <!-- 所有 6 个卡片合并到一个 grid 中 -->
                 <div class="cards-grid">
-                    
-                    <!-- 1. 核心温度 -->
                     <div class="card danger-border">
                         <div class="card-title">核心温度</div>
                         <div class="big-value text-red">
@@ -95,7 +170,6 @@
                         </div>
                     </div>
 
-                    <!-- 2. CPU 负载 -->
                     <div class="card primary-border">
                         <div class="card-title">CPU 负载</div>
                         <div class="big-value text-green">
@@ -109,7 +183,6 @@
                         </div>
                     </div>
 
-                    <!-- 3. 物理内存 -->
                     <div class="card cyan-border">
                         <div class="card-title">内存使用 (RAM)</div>
                         <div class="big-value text-cyan">
@@ -123,7 +196,6 @@
                         </div>
                     </div>
 
-                    <!-- 4. 存储空间 -->
                     <div class="card yellow-border">
                         <div class="card-title">存储空间 (Root)</div>
                         <div class="donut-chart">
@@ -138,7 +210,6 @@
                         <div class="sub-info center">剩余空间: <span id="disk-free">--</span> GB</div>
                     </div>
                 
-                    <!-- 5. 详细系统信息 (KV-Rows 合并) - 占据两列 -->
                     <div class="card span-2-columns" style="border-top: 3px solid var(--purple);">
                         <div class="card-title">系统详细概览</div>
                         <div class="kv-row">
@@ -159,7 +230,6 @@
                         </div>
                     </div>
                 
-                    <!-- 6. 运行时间 / 摘要 (KV-Rows 合并) - 占据两列 -->
                     <div class="card span-2-columns cyan-border">
                         <div class="card-title">系统运行时间</div>
                         <div class="big-value text-cyan" style="font-size: 48px;">
@@ -183,7 +253,6 @@
 
                 </div>
 
-                <!-- 日志区 -->
                 <div class="log-panel">
                     <div class="card-title">系统事件日志 (SYSTEM LOGS)</div>
                     <div class="log-content" id="log-box">
@@ -192,7 +261,6 @@
                 </div>
             </div>
 
-            <!-- 网络监控页 (占位) -->
             <div id="network" class="page">
                 <header><h2>网络流量分析</h2></header>
                 <div class="card wide">
@@ -201,7 +269,6 @@
                 </div>
             </div>
 
-            <!-- 终端页 (占位) -->
             <div id="terminal" class="page">
                 <header><h2>Web SSH (模拟)</h2></header>
                 <div class="terminal-window">
@@ -211,6 +278,15 @@
             </div>
 
         </main>
+    </div>
+
+    <div id="customModal" class="custom-modal">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle"></div>
+            <div class="modal-message" id="modalMessage"></div>
+            <div class="modal-actions" id="modalActions">
+                </div>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
@@ -223,23 +299,64 @@
             if(target) target.classList.add('active');
         }
 
-        // ✨ 系统操作函数：调用后端 API ✨
-        async function sysAction(type) {
+        const modal = document.getElementById('customModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalActions = document.getElementById('modalActions');
+        const modalContent = modal.querySelector('.modal-content');
+
+        // 关闭模态框
+        function closeModal() {
+            modal.classList.remove('visible');
+            modalContent.classList.remove('modal-result');
+        }
+
+        /**
+         * 显示操作结果提示框
+         * @param {string} title - 标题
+         * @param {string} message - 消息内容
+         */
+        function showResultModal(title, message) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalActions.innerHTML = `<button class="modal-btn-cancel" onclick="closeModal()">确定</button>`;
+            modalContent.classList.add('modal-result'); // 添加结果样式
+            modal.classList.add('visible');
+        }
+
+        /**
+         * 显示确认操作模态框
+         * @param {string} type - 'reboot' 或 'shutdown'
+         */
+        function showSysConfirm(type) {
             const actionName = type === 'reboot' ? '重启' : '关机';
-            // 二次确认，防止误触
-            if(!confirm(`⚠️ 高危操作警告 ⚠️\n\n您确定要强制 [${actionName}] 树莓派吗？\n这将导致所有服务停止！`)) return;
+            modalTitle.textContent = ` 高危操作警告 ⚠️`;
+            modalMessage.innerHTML = `您确定要强制 [${actionName}] 树莓派吗？<br>这将导致所有服务停止！`;
             
+            modalActions.innerHTML = `
+                <button class="modal-btn-cancel" onclick="closeModal()">取消</button>
+                <button class="modal-btn-confirm" onclick="sysAction('${type}')">${actionName}</button>
+            `;
+            modalContent.classList.remove('modal-result'); // 移除结果样式
+            modal.classList.add('visible');
+        }
+
+        // ✨ 系统操作函数：调用后端 API (不再处理弹窗，只处理 API 调用) ✨
+        async function sysAction(type) {
+            closeModal(); // 发送请求前先关闭确认框
+            const actionName = type === 'reboot' ? '重启' : '关机';
+
             try {
                 const res = await fetch(`/api/system/${type}`, { method: 'POST' });
                 const data = await res.json();
                 
                 if(res.ok) {
-                    alert(`指令已发送: ${data.msg}\n页面即将断开连接。`);
+                    showResultModal(`✅ ${actionName} 指令发送成功`, `${data.msg}\n页面即将断开连接。`);
                 } else {
-                    alert(`操作失败: ${data.msg}`);
+                    showResultModal(`❌ ${actionName} 指令失败`, `操作失败: ${data.msg}`);
                 }
             } catch(e) {
-                alert("通信错误: 无法连接到服务器 (可能是权限不足)");
+                showResultModal("🚨 通信错误", "无法连接到服务器 (可能是权限不足或设备已离线)。");
             }
         }
     </script>
