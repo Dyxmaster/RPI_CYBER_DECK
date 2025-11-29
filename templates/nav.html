@@ -1,0 +1,48 @@
+<!-- nav.html -->
+<aside class="cyber-sidebar">
+    <!-- 1. 顶部品牌区 -->
+    <div class="brand-header">
+        <div class="glitch-text" data-text="RPI_CORE">RPI_CORE</div>
+        <div class="brand-sub">SYSTEM ACCESS // LV.4</div>
+        <div class="scan-line-decoration"></div>
+    </div>
+    
+    <!-- 2. 核心导航菜单 -->
+    <nav class="nav-menu">
+        <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+            <div class="nav-icon">📊</div>
+            <span class="nav-text">系统概览</span>
+            <div class="laser-bar"></div>
+            <div class="nav-bg-glow"></div>
+        </a>
+        <a href="/containers" class="nav-link {% if active_page == 'containers' %}active{% endif %}">
+            <div class="nav-icon">📦</div>
+            <span class="nav-text">容器管理</span>
+            <div class="laser-bar"></div>
+            <div class="nav-bg-glow"></div>
+        </a>
+    </nav>
+
+    <div class="spacer"></div>
+
+    <div class="ext-module" onclick="alert('系统提示：\n正在连接外部插件库...\n[连接超时]')">
+        <div class="ext-icon">⚡</div>
+        <div class="ext-text">加载插件 [+]</div>
+    </div>
+    
+    <div class="hud-footer">
+        <div class="hud-row">
+            <span class="hud-label">HOST_ID:</span>
+            <span class="hud-val glitch-hover" id="nav-host-name">NODE-01</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">RUNTIME:</span>
+            <span class="hud-val monospace" id="nav-uptime">00:00:00</span>
+        </div>
+        <div class="connection-status">
+            <div class="status-led"></div>
+            <span class="status-msg">SECURE_LINK_ESTABLISHED</span>
+        </div>
+        <div class="hud-grid-bg"></div>
+    </div>
+</aside>

@@ -1,0 +1,4 @@
+flask
+psutil
+flask-cors
+docker

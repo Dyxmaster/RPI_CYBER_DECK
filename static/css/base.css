@@ -1,0 +1,281 @@
+/* ===== 主题变量 ===== */
+:root {
+    --bg: #050a0f;
+    --card-bg: rgba(16, 24, 32, 0.85);
+    --primary: #00ff41;
+    --danger: #ff003c;
+    --cyan: #00f3ff;
+    --yellow: #fcee0a;
+    --text: #e0e0e0;
+}
+
+/* ===== 全局 ===== */
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', 'Microsoft YaHei', monospace;
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* 屏幕扫描线特效 */
+.scanline {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background:
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* 可选：背景 overlay（你页面里有 overlay 标签，这里顺便补上） */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at 20% 20%, rgba(0, 255, 65, 0.05), transparent 60%),
+                radial-gradient(circle at 80% 80%, rgba(0, 243, 255, 0.05), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 布局容器：左侧导航 + 右侧主内容 */
+.container {
+    display: flex;
+    height: 100%;
+}
+
+/* ===== 主内容区域 ===== */
+.main-content {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+    position: relative;
+}
+
+/* 页面切换（dashboard / network / terminal） */
+.page {
+    display: none;
+    animation: fadeIn 0.4s;
+}
+.page.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 顶部标题栏 */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #333;
+    padding-bottom: 10px;
+}
+
+/* LIVE / ADMIN 标识 */
+.live-tag {
+    background: var(--danger);
+    color: #000;
+    padding: 2px 8px;
+    font-weight: bold;
+    border-radius: 2px;
+    font-size: 12px;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0.5; }
+}
+
+/* ===== 卡片网格布局 ===== */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+/* 通用卡片 */
+.card {
+    background: var(--card-bg);
+    padding: 20px;
+    border: 1px solid #333;
+    position: relative;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
+
+/* 横向占满的卡片（容器页面用到 .card.wide） */
+.card.wide {
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
+/* 不同颜色边框 */
+.card.danger-border { border-top: 2px solid var(--danger); }
+.card.primary-border { border-top: 2px solid var(--primary); }
+.card.cyan-border    { border-top: 2px solid var(--cyan); }
+.card.yellow-border  { border-top: 2px solid var(--yellow); }
+
+.card-title {
+    font-size: 14px;
+    color: #aaa;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+/* 核心数字 */
+.big-value {
+    font-size: 42px;
+    font-weight: bold;
+}
+.big-value small {
+    font-size: 18px;
+    opacity: 0.7;
+}
+
+/* 颜色工具类 */
+.text-red {
+    color: var(--danger);
+    text-shadow: 0 0 10px var(--danger);
+}
+.text-green {
+    color: var(--primary);
+    text-shadow: 0 0 10px var(--primary);
+}
+.text-cyan {
+    color: var(--cyan);
+    text-shadow: 0 0 10px var(--cyan);
+}
+
+/* 进度条 */
+.bar-bg {
+    width: 100%;
+    height: 6px;
+    background: #222;
+    margin-top: 15px;
+}
+.bar-fill {
+    height: 100%;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 5px currentColor;
+}
+.bar-fill.red   { background: var(--danger); }
+.bar-fill.green { background: var(--primary); }
+.bar-fill.cyan  { background: var(--cyan); }
+
+.sub-info {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+}
+.center { text-align: center; }
+
+/* ===== Donut 圆环图 ===== */
+.donut-chart {
+    position: relative;
+    width: 100px;
+    margin: 0 auto;
+}
+.circle-bg {
+    fill: none;
+    stroke: #222;
+    stroke-width: 3;
+}
+.circle {
+    fill: none;
+    stroke-width: 3;
+    stroke: var(--yellow);
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.5s;
+}
+.donut-text {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 18px;
+    color: var(--yellow);
+}
+
+/* ===== 日志面板 ===== */
+.log-panel {
+    background: #000;
+    border: 1px solid #333;
+    padding: 15px;
+    height: 200px;
+    overflow-y: hidden;
+    font-family: monospace;
+}
+.log-content {
+    color: #00ff41;
+    font-size: 12px;
+    opacity: 0.8;
+}
+.log-line {
+    margin-bottom: 4px;
+    border-bottom: 1px dashed #222;
+}
+
+/* ===== Terminal 模拟窗口 ===== */
+.terminal-window {
+    background: #111;
+    padding: 20px;
+    font-family: monospace;
+    border: 1px solid #444;
+    height: 300px;
+}
+.cursor {
+    animation: blink 1s infinite;
+}
+
+/* ===== （可选）旧版 sidebar 保留：如果完全不用可以删掉 ===== */
+.sidebar {
+    width: 240px;
+    background: #000;
+    border-right: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+.brand {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--primary);
+    margin-bottom: 40px;
+    text-shadow: 0 0 10px var(--primary);
+    letter-spacing: 2px;
+}
+.sys-info-box {
+    margin-top: auto;
+    font-size: 12px;
+    color: #555;
+    border-top: 1px solid #222;
+    padding-top: 20px;
+}
+.sys-info-box span {
+    color: var(--cyan);
+}
+/* 结构化键值行（System Info / CPU 详细用） */
+.kv-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    margin-bottom: 6px;
+    color: #aaa;
+}
+.kv-label {
+    opacity: 0.75;
+}
+.kv-value {
+    font-family: monospace;
+    color: var(--text);
+    text-align: right;
+}

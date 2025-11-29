@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>树莓派中枢系统 // V5.0 Pro</title>
+    <!-- 引入公共样式 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <!-- 引入导航栏样式 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav.css') }}">
+    <!-- 临时增加按钮和布局样式 -->
+    <style>
+        .power-btn {
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+        .power-btn:hover {
+            background: var(--danger);
+            color: #fff;
+            box-shadow: 0 0 10px var(--danger);
+        }
+        .power-btn.reboot {
+            border-color: var(--yellow);
+            color: var(--yellow);
+        }
+        .power-btn.reboot:hover {
+            background: var(--yellow);
+            color: #000;
+            box-shadow: 0 0 10px var(--yellow);
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+        }
+        
+        /* --- 4 + 2 布局优化 CSS --- */
+        /* 强制 4 列布局 */
+        @media (min-width: 1400px) {
+            .cards-grid {
+                grid-template-columns: repeat(4, 1fr); 
+            }
+        }
+        
+        /* 让底部的两个卡片在宽屏下占据 2 列 */
+        @media (min-width: 1400px) {
+            .card.span-2-columns {
+                grid-column: span 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <div class="scanline"></div>
+
+    <div class="container">
+        
+        <!-- 引用公共导航栏 -->
+        {% include 'nav.html' %}
+
+        <main class="main-content">
+            
+            <div id="dashboard" class="page active">
+                <header>
+                    <h2>实时硬件监控</h2>
+                    <!-- 关机/重启按钮 -->
+                    <div class="header-actions">
+                        <button class="power-btn reboot" onclick="sysAction('reboot')">⚡ 重启系统</button>
+                        <button class="power-btn" onclick="sysAction('shutdown')">🛑 立即关机</button>
+                        <div class="live-tag" style="margin-left: 15px;">LIVE DATA</div>
+                    </div>
+                </header>
+
+                <!-- 所有 6 个卡片合并到一个 grid 中 -->
+                <div class="cards-grid">
+                    
+                    <!-- 1. 核心温度 -->
+                    <div class="card danger-border">
+                        <div class="card-title">核心温度</div>
+                        <div class="big-value text-red">
+                            <span id="temp-val">--</span><small>°C</small>
+                        </div>
+                        <div class="chart-box">
+                            <div class="bar-bg">
+                                <div class="bar-fill red" id="temp-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. CPU 负载 -->
+                    <div class="card primary-border">
+                        <div class="card-title">CPU 负载</div>
+                        <div class="big-value text-green">
+                            <span id="cpu-val">--</span><small>%</small>
+                        </div>
+                        <div class="sub-info">
+                            频率: <span id="cpu-freq">--</span> MHz
+                        </div>
+                        <div class="bar-bg">
+                            <div class="bar-fill green" id="cpu-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- 3. 物理内存 -->
+                    <div class="card cyan-border">
+                        <div class="card-title">内存使用 (RAM)</div>
+                        <div class="big-value text-cyan">
+                            <span id="mem-val">--</span><small>%</small>
+                        </div>
+                        <div class="sub-info">
+                            已用: <span id="mem-used">--</span> GB / 总计: <span id="mem-total">--</span> GB
+                        </div>
+                        <div class="bar-bg">
+                            <div class="bar-fill cyan" id="mem-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- 4. 存储空间 -->
+                    <div class="card yellow-border">
+                        <div class="card-title">存储空间 (Root)</div>
+                        <div class="donut-chart">
+                            <svg viewBox="0 0 36 36">
+                                <path class="circle-bg"
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path class="circle" id="disk-circle" stroke-dasharray="0, 100"
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <div class="donut-text" id="disk-val">--%</div>
+                        </div>
+                        <div class="sub-info center">剩余空间: <span id="disk-free">--</span> GB</div>
+                    </div>
+                
+                    <!-- 5. 详细系统信息 (KV-Rows 合并) - 占据两列 -->
+                    <div class="card span-2-columns" style="border-top: 3px solid var(--purple);">
+                        <div class="card-title">系统详细概览</div>
+                        <div class="kv-row">
+                            <span class="kv-label">主机名</span>
+                            <span class="kv-value" id="sys-hostname">--</span>
+                        </div>
+                        <div class="kv-row">
+                            <span class="kv-label">操作系统</span>
+                            <span class="kv-value" id="sys-os">--</span>
+                        </div>
+                        <div class="kv-row">
+                            <span class="kv-label">IP 地址</span>
+                            <span class="kv-value" id="sys-ip">--</span>
+                        </div>
+                        <div class="kv-row">
+                            <span class="kv-label">CPU 核心数</span>
+                            <span class="kv-value" id="cpu-cores">--</span>
+                        </div>
+                    </div>
+                
+                    <!-- 6. 运行时间 / 摘要 (KV-Rows 合并) - 占据两列 -->
+                    <div class="card span-2-columns cyan-border">
+                        <div class="card-title">系统运行时间</div>
+                        <div class="big-value text-cyan" style="font-size: 48px;">
+                            <span id="sys-uptime">--</span>
+                        </div>
+                        <div class="sub-info">自上次启动以来</div>
+
+                        <div class="kv-row" style="margin-top: 15px;">
+                            <span class="kv-label">内存使用率</span>
+                            <span class="kv-value">
+                                <span id="mem-percent-small">--</span>%
+                            </span>
+                        </div>
+                        <div class="kv-row">
+                            <span class="kv-label">磁盘空闲空间</span>
+                            <span class="kv-value">
+                                剩余 <span id="disk-free-small">--</span> GB
+                            </span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 日志区 -->
+                <div class="log-panel">
+                    <div class="card-title">系统事件日志 (SYSTEM LOGS)</div>
+                    <div class="log-content" id="log-box">
+                        <div class="log-line">System initialized... waiting for data stream.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 网络监控页 (占位) -->
+            <div id="network" class="page">
+                <header><h2>网络流量分析</h2></header>
+                <div class="card wide">
+                    <div class="card-title">当前 IP 地址</div>
+                    <h1 class="text-cyan" id="ip-addr">Loading...</h1>
+                </div>
+            </div>
+
+            <!-- 终端页 (占位) -->
+            <div id="terminal" class="page">
+                <header><h2>Web SSH (模拟)</h2></header>
+                <div class="terminal-window">
+                    <div class="term-output">由于安全限制，当前仅支持查看状态。</div>
+                    <div class="term-input"><span>root@rpi:~#</span> <span class="cursor">_</span></div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // 页面加载时，根据后端传来的 initial_tab 自动切换显示区域
+        const initialTab = "{{ initial_tab }}";
+        if(initialTab && initialTab !== 'None') {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            const target = document.getElementById(initialTab);
+            if(target) target.classList.add('active');
+        }
+
+        // ✨ 系统操作函数：调用后端 API ✨
+        async function sysAction(type) {
+            const actionName = type === 'reboot' ? '重启' : '关机';
+            // 二次确认，防止误触
+            if(!confirm(`⚠️ 高危操作警告 ⚠️\n\n您确定要强制 [${actionName}] 树莓派吗？\n这将导致所有服务停止！`)) return;
+            
+            try {
+                const res = await fetch(`/api/system/${type}`, { method: 'POST' });
+                const data = await res.json();
+                
+                if(res.ok) {
+                    alert(`指令已发送: ${data.msg}\n页面即将断开连接。`);
+                } else {
+                    alert(`操作失败: ${data.msg}`);
+                }
+            } catch(e) {
+                alert("通信错误: 无法连接到服务器 (可能是权限不足)");
+            }
+        }
+    </script>
+</body>
+</html>

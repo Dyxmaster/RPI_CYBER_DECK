@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCKER COMMANDER</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/containers.css') }}">
+    <style>
+        /* 针对表格的额外样式 */
+        .container-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-family: monospace; }
+        .container-table th { text-align: left; border-bottom: 2px solid var(--primary); padding: 10px; color: var(--primary); }
+        .container-table td { padding: 15px 10px; border-bottom: 1px solid #333; color: #ccc; }
+        
+        .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .running { background: rgba(0, 255, 65, 0.2); color: var(--primary); border: 1px solid var(--primary); }
+        .exited { background: rgba(255, 0, 60, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+        
+        .action-btn { 
+            background: transparent; border: 1px solid var(--cyan); color: var(--cyan); 
+            padding: 5px 10px; cursor: pointer; margin-right: 5px; transition: 0.2s;
+        }
+        .action-btn:hover { background: var(--cyan); color: #000; }
+        .action-btn.stop { border-color: var(--danger); color: var(--danger); }
+        .action-btn.stop:hover { background: var(--danger); color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="scanline"></div>
+    <div class="container">
+        
+        <!-- 🔥 引用公共导航栏 🔥 -->
+        {% include 'nav.html' %}
+
+        <main class="main-content">
+            <header>
+                <h2>DOCKER 容器控制台</h2>
+                <div class="live-tag">ADMIN ACCESS</div>
+            </header>
+
+            <div class="card wide">
+                <table class="container-table">
+                    <thead>
+                        <tr>
+                            <th>NAME</th>
+                            <th>IMAGE</th>
+                            <th>STATUS</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="container-list">
+                        <!-- JS 填充 -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 简单的内嵌 JS 用于刷新列表和发送命令
+        async function loadContainers() {
+            const res = await fetch('/api/docker/list');
+            const data = await res.json();
+            const tbody = document.getElementById('container-list');
+            tbody.innerHTML = '';
+
+            data.forEach(c => {
+                const row = `
+                    <tr>
+                        <td style="font-weight:bold">${c.name}</td>
+                        <td style="font-size:12px; opacity:0.7">${c.image}</td>
+                        <td><span class="status-badge ${c.status}">${c.status.toUpperCase()}</span></td>
+                        <td>
+                            ${c.status === 'running' 
+                                ? `<button class="action-btn stop" onclick="action('${c.id}', 'stop')">STOP</button> 
+                                   <button class="action-btn" onclick="action('${c.id}', 'restart')">RESTART</button>`
+                                : `<button class="action-btn" onclick="action('${c.id}', 'start')">START</button>`
+                            }
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        async function action(id, type) {
+            if(!confirm(`Confirm ${type} container?`)) return;
+            await fetch(`/api/docker/${type}/${id}`);
+            loadContainers(); // 刷新列表
+        }
+
+        loadContainers();
+        setInterval(loadContainers, 5000); // 每5秒刷新状态
+    
+    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

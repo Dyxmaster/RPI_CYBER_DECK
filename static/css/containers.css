@@ -1,0 +1,106 @@
+/* =========================================
+   CONTAINER MANAGER STYLES
+   表格、状态徽章、操作按钮
+   ========================================= */
+
+/* --- 容器列表表格 --- */
+.container-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-family: 'Consolas', 'Roboto Mono', monospace; /* 强制等宽字体 */
+    font-size: 14px;
+}
+
+/* 表头 */
+.container-table th {
+    text-align: left;
+    border-bottom: 2px solid var(--primary, #00ff41); /* 兼容变量 */
+    padding: 15px;
+    color: var(--primary, #00ff41);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 12px;
+    background: rgba(0, 255, 65, 0.05); /* 微弱背景 */
+}
+
+/* 单元格 */
+.container-table td {
+    padding: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ccc;
+    vertical-align: middle;
+    transition: background 0.2s;
+}
+
+/* 鼠标悬停行高亮 */
+.container-table tr:hover td {
+    background: rgba(255, 255, 255, 0.03);
+    color: #fff;
+}
+
+/* --- 状态 Badge (徽章) --- */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 2px; /* 赛博风格偏向直角 */
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: inline-block;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+.status-badge.running {
+    background: rgba(0, 255, 65, 0.15);
+    color: var(--primary, #00ff41);
+    border: 1px solid var(--primary, #00ff41);
+    box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+}
+
+.status-badge.exited {
+    background: rgba(255, 0, 60, 0.15);
+    color: var(--danger, #ff003c);
+    border: 1px solid var(--danger, #ff003c);
+}
+
+/* --- 操作按钮 --- */
+.action-btn {
+    background: transparent;
+    border: 1px solid var(--cyan, #00f3ff);
+    color: var(--cyan, #00f3ff);
+    padding: 6px 12px;
+    cursor: pointer;
+    margin-right: 8px;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 2px;
+}
+
+/* 默认按钮悬停 (Start/Restart) */
+.action-btn:hover {
+    background: var(--cyan, #00f3ff);
+    color: #000;
+    box-shadow: 0 0 15px var(--cyan, #00f3ff);
+}
+
+/* 停止按钮 (红色系) */
+.action-btn.stop {
+    border-color: var(--danger, #ff003c);
+    color: var(--danger, #ff003c);
+}
+
+.action-btn.stop:hover {
+    background: var(--danger, #ff003c);
+    color: #fff;
+    box-shadow: 0 0 15px var(--danger, #ff003c);
+}
+
+/* 按钮点击反馈 */
+.action-btn:active {
+    transform: translateY(1px);
+}

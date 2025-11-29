@@ -1,0 +1,241 @@
+/* --- 1. 侧边栏整体容器 --- */
+.cyber-sidebar {
+    width: 260px;
+    height: 100%;
+    background: rgba(5, 8, 10, 0.85); /* 深色半透明底 */
+    backdrop-filter: blur(10px);      /* 毛玻璃特效 */
+    border-right: 1px solid rgba(0, 255, 65, 0.15);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+}
+
+/* --- 2. 品牌头部 --- */
+.brand-header {
+    padding: 30px 24px;
+    position: relative;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: linear-gradient(180deg, rgba(0, 255, 65, 0.05) 0%, transparent 100%);
+}
+
+.glitch-text {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--primary, #00ff41);
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.4);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.brand-sub {
+    font-size: 10px;
+    color: #5f7d65;
+    letter-spacing: 3px;
+    font-family: monospace;
+}
+
+/* 装饰用扫描线 */
+.scan-line-decoration {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 40%;
+    height: 2px;
+    background: var(--primary, #00ff41);
+    box-shadow: 0 0 8px var(--primary, #00ff41);
+}
+
+/* --- 3. 导航菜单 --- */
+.nav-menu {
+    padding: 20px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* 菜单间距 */
+}
+
+.nav-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    color: #889096;
+    border-radius: 4px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden; /* 限制激光条溢出 */
+    border: 1px solid transparent; /* 预留边框位置 */
+}
+
+.nav-icon {
+    font-size: 18px;
+    margin-right: 14px;
+    filter: grayscale(100%) opacity(0.7);
+    transition: 0.3s;
+    z-index: 2;
+}
+
+.nav-text {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    z-index: 2;
+    transition: 0.3s;
+}
+
+/* 鼠标悬停 */
+.nav-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.03);
+    transform: translateX(4px); /* 轻微右移 */
+    border-color: rgba(255, 255, 255, 0.05);
+}
+.nav-link:hover .nav-icon {
+    filter: grayscale(0%) opacity(1);
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+/* 激活状态 */
+.nav-link.active {
+    color: #fff;
+    border-color: rgba(0, 255, 65, 0.3);
+    box-shadow: inset 0 0 20px rgba(0, 255, 65, 0.05);
+}
+.nav-link.active .nav-icon {
+    filter: grayscale(0%);
+    transform: scale(1.1);
+}
+.nav-link.active .nav-text {
+    color: #fff;
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+}
+
+/* 激光光条 */
+.laser-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--primary, #00ff41);
+    box-shadow: 2px 0 10px var(--primary, #00ff41);
+    opacity: 0;
+    transition: 0.3s;
+    z-index: 3;
+}
+.nav-link.active .laser-bar {
+    opacity: 1;
+}
+
+/* 渐变背景光 */
+.nav-bg-glow {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(90deg, rgba(0, 255, 65, 0.15) 0%, transparent 100%);
+    opacity: 0;
+    transition: 0.4s;
+    z-index: 1;
+}
+.nav-link.active .nav-bg-glow {
+    opacity: 1;
+}
+
+/* --- 4. 拓展模块与底部 --- */
+.spacer { flex: 1; }
+
+.ext-module {
+    margin: 0 15px 15px;
+    padding: 12px;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.3s;
+    border-radius: 4px;
+}
+.ext-module:hover {
+    border-color: var(--primary, #00ff41);
+    color: var(--primary, #00ff41);
+    background: rgba(0, 255, 65, 0.05);
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.1);
+}
+.ext-icon { margin-right: 8px; }
+.ext-text { font-size: 13px; font-weight: bold; }
+
+/* HUD 底部面板 */
+.hud-footer {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.hud-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: #888;
+    z-index: 2;
+    position: relative;
+}
+.hud-val {
+    color: var(--cyan, #00f3ff);
+    font-weight: bold;
+}
+.monospace {
+    font-family: monospace;
+    letter-spacing: 1px;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    margin-top: 12px;
+    padding: 6px;
+    background: #080808;
+    border: 1px solid #222;
+    border-radius: 3px;
+    z-index: 2;
+    position: relative;
+}
+
+.status-led {
+    width: 6px;
+    height: 6px;
+    background: var(--primary, #00ff41);
+    border-radius: 50%;
+    margin-right: 8px;
+    box-shadow: 0 0 8px var(--primary, #00ff41);
+    animation: blink-led 2s infinite ease-in-out;
+}
+
+.status-msg {
+    font-size: 9px;
+    color: #555;
+    letter-spacing: 1px;
+}
+
+@keyframes blink-led {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.3; transform: scale(0.8); }
+}
+
+/* 背景网格装饰 */
+.hud-grid-bg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 10px 10px;
+    z-index: 1;
+    opacity: 0.5;
+}
