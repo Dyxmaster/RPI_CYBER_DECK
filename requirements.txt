@@ -2,3 +2,5 @@ flask
 psutil
 flask-cors
 docker
+wakeonlan
+paramiko

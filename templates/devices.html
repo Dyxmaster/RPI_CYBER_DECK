@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEVICE COMMANDER</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav.css') }}">
+    
+    <style>
+        /* --- 全局变量与基础 --- */
+        :root {
+            --card-bg: #141414;
+            --card-border: #333;
+            --accent-cyan: #00f2ff;
+            --accent-green: #00ff41;
+            --accent-red: #ff2a2a;
+            --accent-yellow: #ffc107;
+        }
+
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        /* --- 赛博卡片 V2 --- */
+        .cyber-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-top: 3px solid #444; /* 默认离线灰色 */
+            border-radius: 4px;
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .cyber-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+            border-color: #555;
+        }
+
+        /* 在线状态高亮 */
+        .cyber-card.online { border-top-color: var(--accent-green); box-shadow: 0 5px 15px rgba(0, 255, 65, 0.1); }
+        .cyber-card.offline { border-top-color: var(--accent-red); }
+
+        .card-body { padding: 20px; flex-grow: 1; }
+
+        /* 头部信息 */
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+        .dev-name { font-size: 1.4em; font-weight: 700; color: #fff; margin-bottom: 5px; }
+        .dev-ip { font-family: 'Consolas', monospace; color: var(--accent-cyan); font-size: 0.95em; letter-spacing: 1px; }
+        
+        .ping-badge { 
+            font-size: 0.8em; padding: 2px 8px; border-radius: 2px; font-weight: bold; font-family: monospace;
+            background: #222; color: #666; border: 1px solid #444;
+        }
+        .online .ping-badge { color: var(--accent-green); border-color: var(--accent-green); background: rgba(0,255,65,0.05); }
+
+        /* 硬件信息展示区 */
+        .specs-box {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid #2a2a2a;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .spec-row { display: flex; justify-content: space-between; font-size: 0.85em; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed #333; }
+        .spec-row:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+        .spec-label { color: #888; }
+        .spec-val { color: #ddd; font-family: monospace; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* --- 按钮控制区 --- */
+        .control-panel {
+            background: #0a0a0a;
+            border-top: 1px solid #333;
+            padding: 15px;
+        }
+
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        
+        /* 通用按钮样式 */
+        .c-btn {
+            border: none; border-radius: 3px; padding: 8px 0;
+            cursor: pointer; font-size: 0.9em; font-weight: bold;
+            transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+            text-transform: uppercase;
+        }
+        .c-btn:hover { filter: brightness(1.2); }
+        .c-btn:active { transform: scale(0.98); }
+
+        /* 颜色定义 */
+        .btn-sync { background: #222; color: var(--accent-cyan); border: 1px solid var(--accent-cyan); grid-column: span 2; }
+        .btn-sync:hover { background: var(--accent-cyan); color: #000; }
+        
+        .btn-wol { background: rgba(0, 255, 65, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+        .btn-wol:hover { background: var(--accent-green); color: #000; }
+        
+        .btn-restart { background: rgba(255, 193, 7, 0.15); color: var(--accent-yellow); border: 1px solid var(--accent-yellow); }
+        .btn-restart:hover { background: var(--accent-yellow); color: #000; }
+
+        .btn-shutdown { background: rgba(255, 42, 42, 0.15); color: var(--accent-red); border: 1px solid var(--accent-red); grid-column: span 2; }
+        .btn-shutdown:hover { background: var(--accent-red); color: #fff; }
+
+        .btn-edit-sm { 
+            font-size: 0.8em; color: #555; background: none; border: none; 
+            width: 100%; text-align: center; margin-top: 5px; cursor: pointer; text-decoration: underline; 
+        }
+        .btn-edit-sm:hover { color: #aaa; }
+
+        /* --- 消息通知中心 (Toast) --- */
+        #toast-container {
+            position: fixed; top: 20px; right: 20px; z-index: 10000;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .toast {
+            background: rgba(0, 0, 0, 0.9);
+            border-left: 4px solid var(--accent-cyan);
+            color: #fff;
+            padding: 15px 25px;
+            min-width: 300px;
+            border-radius: 4px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: space-between;
+            animation: slideIn 0.3s ease-out;
+        }
+        .toast.error { border-left-color: var(--accent-red); }
+        .toast.success { border-left-color: var(--accent-green); }
+        
+        @keyframes slideIn { from{transform: translateX(100%); opacity:0} to{transform: translateX(0); opacity:1} }
+        @keyframes fadeOut { from{opacity:1} to{opacity:0} }
+
+        /* --- 模态框 (Modal) --- */
+        .custom-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 5000; backdrop-filter: blur(5px); }
+        .custom-modal.visible { display: flex; }
+        .modal-box { background: #111; border: 1px solid #444; width: 400px; padding: 30px; border-radius: 8px; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { color: var(--accent-cyan); display: block; margin-bottom: 5px; font-size: 0.9em; }
+        .input-group input { width: 100%; padding: 10px; background: #222; border: 1px solid #444; color: #fff; box-sizing: border-box; }
+        
+        .modal-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .m-btn { padding: 8px 20px; border: none; cursor: pointer; font-weight: bold; border-radius: 3px; }
+        .m-save { background: var(--accent-cyan); color: #000; }
+        .m-cancel { background: #333; color: #fff; }
+    </style>
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <div class="container">
+        {% include 'nav.html' %}
+        
+        <main class="main-content">
+            <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 20px;">
+                <div>
+                    <h2 style="margin:0; font-size: 2em; letter-spacing: 2px;">DEVICE CONTROL</h2>
+                    <span style="color: #666; font-size: 0.9em;"> LAN MANAGEMENT SYSTEM // V7.2</span>
+                </div>
+                <button class="c-btn" style="background:var(--accent-cyan); color:#000; padding:10px 20px;" onclick="openAddModal()">
+                    ➕ 添加新设备
+                </button>
+            </header>
+
+            <div class="device-grid" id="deviceGrid">
+                {% for d in devices %}
+                <div class="cyber-card" id="card-{{ d.id }}">
+                    <div class="card-body">
+                        <div class="card-header">
+                            <div>
+                                <div class="dev-name">{{ d.name }}</div>
+                                <div class="dev-ip">{{ d.ip }}</div>
+                            </div>
+                            <div class="ping-badge" id="ping-{{ d.id }}">waiting...</div>
+                        </div>
+
+                        <div class="specs-box">
+                           
+                            <div class="spec-row">
+                                <span class="spec-label">CPU</span>
+                                <span class="spec-val" id="cpu-{{ d.id }}" title="{{ d.cpu_name }}">{{ d.cpu_name or 'Unknown' }}</span>
+                            </div>
+                            <div class="spec-row">
+                                <span class="spec-label">GPU</span>
+                                <span class="spec-val" id="gpu-{{ d.id }}" title="{{ d.gpu_name }}">{{ d.gpu_name or 'Unknown' }}</span>
+                            </div>
+                            <div class="spec-row">
+                                <span class="spec-label">MAC</span>
+                                <span class="spec-val" style="letter-spacing:1px;">{{ d.mac or '--' }}</span>
+                            </div>
+                            <div class="spec-row">
+                                <span class="spec-label">RAM</span>
+                                <span class="spec-val" id="ram-{{ d.id }}">{{ d.ram_size or '--' }}</span>
+                            </div>
+
+                            <div class="spec-row">
+                                <span class="spec-label">OS</span>
+                                <span class="spec-val" id="os-{{ d.id }}">{{ d.os_ver or '--' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-panel">
+                        <div class="btn-grid">
+                            <button class="c-btn btn-sync" onclick="syncHardware('{{ d.id }}')">
+                                📥 同步硬件信息
+                            </button>
+                            <button class="c-btn btn-wol" onclick="sendPower('{{ d.id }}', 'wake')">
+                                🟢 开机
+                            </button>
+                            <button class="c-btn btn-restart" onclick="confirmAction('restart', '{{ d.id }}')">
+                                ↻ 重启
+                            </button>
+                            <button class="c-btn btn-shutdown" onclick="confirmAction('shutdown', '{{ d.id }}')">
+                                🛑 远程关机
+                            </button>
+                        </div>
+                        <button class="btn-edit-sm" onclick='openEditModal({{ d | tojson | safe }})'>
+                            ✎ 编辑配置 
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+
+    <div id="editModal" class="custom-modal">
+        <div class="modal-box">
+            <h3 style="color:var(--accent-cyan); margin-top:0;">EDIT CONFIGURATION</h3>
+            <input type="hidden" id="e-id">
+            
+            <div class="input-group">
+                <label>设备显示名称</label>
+                <input type="text" id="e-name">
+            </div>
+            <div class="input-group">
+                <label>IP 地址</label>
+                <input type="text" id="e-ip">
+            </div>
+
+            <div class="input-group">
+                <label>MAC 地址 (WOL 核心凭证)</label>
+                <input type="text" id="e-mac" style="font-family: monospace; color: var(--accent-green);">
+            </div>
+            
+            <div style="border-top: 1px dashed #333; margin: 20px 0; padding-top: 15px;">
+                <label style="color: #fff; font-weight: bold; margin-bottom: 10px; display: block;">SSH 认证 (用于关机/同步)</label>
+                <div class="input-group">
+                    <label>用户名 (User)</label>
+                    <input type="text" id="e-user" placeholder="例如: Administrator">
+                </div>
+                <div class="input-group">
+                    <label>密码 (Password)</label>
+                    <input type="password" id="e-pass" placeholder="Windows 登录密码">
+                </div>
+            </div>
+            
+            <div class="modal-btns">
+                <button class="m-btn" style="background:transparent; color:#666; margin-right:auto;" onclick="deleteDevice()">删除</button>
+                <button class="m-btn m-cancel" onclick="closeModal('editModal')">取消</button>
+                <button class="m-btn m-save" onclick="saveEdit()">保存配置</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="confirmModal" class="custom-modal">
+        <div class="modal-box" style="width: 300px; text-align: center;">
+            <h3 style="color: var(--accent-yellow);">⚠️ 安全确认</h3>
+            <p id="confirmMsg" style="color: #ccc; margin: 20px 0;">确认执行此操作？</p>
+            <div class="modal-btns" style="justify-content: center;">
+                <button class="m-btn m-cancel" onclick="closeModal('confirmModal')">取消</button>
+                <button class="m-btn" style="background: var(--accent-red); color: #fff;" id="btnRealConfirm">确认执行</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="addModal" class="custom-modal">
+        <div class="modal-box">
+            <h3 style="color:var(--accent-green); margin-top:0;">ADD DEVICE</h3>
+            <div class="input-group"><label>名称</label><input type="text" id="a-name"></div>
+            <div class="input-group"><label>IP</label><input type="text" id="a-ip"></div>
+            <div class="modal-btns">
+                <button class="m-btn m-cancel" onclick="closeModal('addModal')">取消</button>
+                <button class="m-btn m-save" onclick="submitAdd()">添加</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showToast(msg, type='success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span>${msg}</span><span style="cursor:pointer" onclick="this.parentElement.remove()">×</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = "fadeOut 0.5s";
+                toast.addEventListener('animationend', () => toast.remove());
+            }, 3000);
+        }
+
+        // --- 核心功能逻辑 ---
+
+        function syncHardware(id) {
+            const btn = document.querySelector(`#card-${id} .btn-sync`);
+            const oldText = btn.innerHTML;
+            btn.innerHTML = "⏳ 连接中...";
+            
+            fetch('/api/devices/sync_info', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id})
+            })
+            .then(res => res.json())
+            .then(res => {
+                btn.innerHTML = oldText;
+                if(res.success) {
+                    showToast("✅ 硬件信息同步成功!", "success");
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast("❌ " + res.message, "error");
+                }
+            })
+            .catch(() => {
+                btn.innerHTML = oldText;
+                showToast("❌ 网络请求失败", "error");
+            });
+        }
+
+        function sendPower(id, action) {
+            showToast("🚀 正在发送指令...", "success");
+            fetch('/api/devices/power', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, action})
+            })
+            .then(res => res.json())
+            .then(d => {
+                if(d.success) showToast(`✅ ${d.message}`, "success");
+                else showToast(`❌ ${d.message}`, "error");
+            });
+        }
+
+        // --- 模态框与编辑逻辑 ---
+
+        function confirmAction(action, id) {
+            const modal = document.getElementById('confirmModal');
+            const msg = document.getElementById('confirmMsg');
+            const btn = document.getElementById('btnRealConfirm');
+            
+            msg.innerText = action === 'shutdown' ? "⚠️ 警告：确定要远程强制关机吗？" : "确定要重启此设备吗？";
+            modal.classList.add('visible');
+            
+            btn.onclick = function() {
+                closeModal('confirmModal');
+                sendPower(id, action);
+            };
+        }
+
+        function openEditModal(d) {
+            document.getElementById('e-id').value = d.id;
+            document.getElementById('e-name').value = d.name;
+            document.getElementById('e-ip').value = d.ip;
+            // ✨ 回填 MAC 地址
+            document.getElementById('e-mac').value = d.mac || ''; 
+            
+            document.getElementById('e-user').value = d.ssh_user || '';
+            document.getElementById('e-pass').value = d.ssh_pass || '';
+            document.getElementById('editModal').classList.add('visible');
+        }
+
+        function saveEdit() {
+            const data = {
+                id: document.getElementById('e-id').value,
+                name: document.getElementById('e-name').value,
+                ip: document.getElementById('e-ip').value,
+                // ✨ 提交 MAC 地址
+                mac: document.getElementById('e-mac').value,
+                ssh_user: document.getElementById('e-user').value,
+                ssh_pass: document.getElementById('e-pass').value
+            };
+            fetch('/api/devices/edit', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+            }).then(() => {
+                showToast("配置已保存");
+                setTimeout(() => location.reload(), 500);
+            });
+        }
+
+        function deleteDevice() {
+            if(!confirm("真的要删除吗？此操作无法撤销。")) return;
+            fetch('/api/devices/delete', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: document.getElementById('e-id').value})
+            }).then(() => location.reload());
+        }
+
+        function openAddModal() { document.getElementById('addModal').classList.add('visible'); }
+        function submitAdd() {
+            const name = document.getElementById('a-name').value;
+            const ip = document.getElementById('a-ip').value;
+            fetch('/api/devices/add', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, ip})
+            }).then(() => location.reload());
+        }
+        function closeModal(id) { document.getElementById(id).classList.remove('visible'); }
+
+        // --- 4. 自动 Ping 轮询 ---
+        function pingLoop() {
+            fetch('/api/devices/ping_status').then(r=>r.json()).then(data => {
+                data.forEach(d => {
+                    const card = document.getElementById(`card-${d.id}`);
+                    const badge = document.getElementById(`ping-${d.id}`);
+                    if(card && badge) {
+                        if(d.online) {
+                            card.classList.add('online');
+                            card.classList.remove('offline');
+                            badge.innerText = d.latency + " ms";
+                            badge.style.color = "var(--accent-green)";
+                            badge.style.borderColor = "var(--accent-green)";
+                        } else {
+                            card.classList.add('offline');
+                            card.classList.remove('online');
+                            badge.innerText = "OFFLINE";
+                            badge.style.color = "#666";
+                            badge.style.borderColor = "#444";
+                        }
+                    }
+                });
+            });
+        }
+        setInterval(pingLoop, 5000); // 5秒轮询一次
+        pingLoop(); 
+    </script>
+</body>
+</html>
