@@ -1,14 +1,14 @@
 from flask import Blueprint, render_template
+from flask_login import login_required  # 1. 导入
 
-# 创建蓝图
 bp = Blueprint('views', __name__)
 
 @bp.route('/')
+@login_required  # 2. 加上这个装饰器
 def index():
-    """系统概览页"""
-    return render_template('index.html', active_page='dashboard', initial_tab='dashboard')
+    return render_template('index.html', active_page='dashboard')
 
 @bp.route('/containers')
-def page_containers():
-    """容器管理页"""
+@login_required  # 2. 加上这个装饰器
+def containers():
     return render_template('containers.html', active_page='containers')

@@ -1,5 +1,5 @@
 # routes/api_monitor.py
-
+from flask_login import login_required
 from flask import Blueprint, jsonify
 from modules.system_stats import get_system_stats  # 注意：从 modules.system_stats 导入
 
@@ -7,6 +7,7 @@ from modules.system_stats import get_system_stats  # 注意：从 modules.system
 bp = Blueprint("api_monitor", __name__)
 
 @bp.route("/api/system/stats")
+@login_required
 def api_system_stats():
     """
     返回树莓派的实时系统状态（CPU / 内存 / 磁盘 / 温度 / IP 等）

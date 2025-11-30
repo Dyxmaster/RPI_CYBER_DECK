@@ -4,3 +4,4 @@ flask-cors
 docker
 wakeonlan
 paramiko
+Flask-Login

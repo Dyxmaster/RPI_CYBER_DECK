@@ -1,9 +1,10 @@
 from flask import Blueprint, jsonify
 from modules import system_ctl
-
+from flask_login import login_required
 bp = Blueprint('api_system', __name__)
 
 @bp.route('/api/system/<action>', methods=['POST'])
+@login_required
 def system_action(action):
     success = False
     msg = ""

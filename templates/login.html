@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>ACCESS CONTROL // RPI_CORE</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <style>
+        /* --- 核心配色 --- */
+        :root {
+            --bg-deep: #020205;
+            --login-bg: rgba(10, 15, 20, 0.85);
+            --login-border: rgba(0, 255, 65, 0.4);
+            --neon-green: #00ff41;
+            --neon-cyan: #00f3ff;
+            --text-main: #e0e0e0;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            /* 升级点1：使用径向渐变替代纯色背景，营造中心光感和四周暗角 */
+            background: radial-gradient(ellipse at center, #1a1f25 0%, var(--bg-deep) 80%);
+            overflow: hidden;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            position: relative;
+            perspective: 1000px; /* 为3D变换提供透视点 */
+        }
+
+        /* --- 新版背景特效 --- */
+
+        /* 升级点2：3D 透视网格地平线 */
+        .cyber-grid-container {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            /* 将容器压扁并旋转，制造地平线效果 */
+            transform: rotateX(60deg) scale(2);
+            transform-origin: center 60%; /* 调整地平线高度 */
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.2;
+            /* 使用遮罩让远处渐隐，避免边缘过于生硬 */
+            -webkit-mask-image: linear-gradient(to top, black 20%, transparent 80%);
+            mask-image: linear-gradient(to top, black 20%, transparent 80%);
+        }
+
+        .cyber-grid {
+            width: 100%; height: 300%; /* 让网格足够高以便移动 */
+            background-image: 
+                linear-gradient(var(--neon-green) 1px, transparent 1px),
+                linear-gradient(90deg, var(--neon-green) 1px, transparent 1px);
+            background-size: 80px 80px; /* 网格大小 */
+            background-position: center center;
+            animation: grid-move 3s linear infinite;
+        }
+
+        @keyframes grid-move {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(80px); } /* 向前移动一个网格单元 */
+        }
+
+        /* 升级点3：远处的地平线光辉 */
+        .horizon-glow {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--neon-green);
+            box-shadow: 0 0 60px 20px var(--neon-green);
+            opacity: 0.15;
+            z-index: 2;
+            transform: translateY(-20px);
+        }
+
+        /* 漂浮粒子 (保留原有设计，但在3D环境下效果更好) */
+        .particles {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 3;
+            pointer-events: none;
+        }
+        .particle {
+            position: absolute;
+            background: var(--neon-green);
+            box-shadow: 0 0 5px var(--neon-green);
+            border-radius: 50%;
+            opacity: 0;
+            animation: float-up 10s linear infinite;
+        }
+        /* 生成一些随机粒子 */
+        .p1 { left: 10%; width: 3px; height: 3px; animation-duration: 12s; animation-delay: 0s; }
+        .p2 { left: 25%; width: 2px; height: 2px; animation-duration: 15s; animation-delay: 2s; }
+        .p3 { left: 40%; width: 4px; height: 4px; animation-duration: 10s; animation-delay: 4s; }
+        .p4 { left: 60%; width: 3px; height: 3px; animation-duration: 14s; animation-delay: 1s; }
+        .p5 { left: 75%; width: 2px; height: 2px; animation-duration: 18s; animation-delay: 3s; }
+        .p6 { left: 90%; width: 4px; height: 4px; animation-duration: 11s; animation-delay: 5s; }
+
+        @keyframes float-up {
+            0% { bottom: -10px; opacity: 0; }
+            20% { opacity: 0.6; }
+            80% { opacity: 0.6; }
+            100% { bottom: 100%; opacity: 0; }
+        }
+        
+
+        /* --- 登录框样式 (保持不变) --- */
+        .login-box {
+            width: 420px;
+            padding: 45px 40px;
+            background: var(--login-bg);
+            border: 1px solid var(--login-border);
+            box-shadow: 
+                0 0 20px rgba(0, 255, 65, 0.1),
+                inset 0 0 30px rgba(0, 255, 65, 0.05);
+            text-align: center;
+            position: relative;
+            backdrop-filter: blur(8px);
+            z-index: 10; 
+            overflow: hidden; 
+            /* 增加一点点3D悬浮感 */
+            transform: translateZ(20px);
+        }
+
+        /* 扫描线动画 (保持不变) */
+        .login-box::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: 0; width: 100%; height: 50%;
+            background: linear-gradient(to bottom, transparent, rgba(0, 255, 65, 0.3), transparent);
+            animation: scan 3s ease-in-out infinite;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        @keyframes scan { 
+            0% { top: -50%; }
+            100% { top: 150%; } 
+        }
+        
+        /* 登录框装饰角 (保持不变) */
+        .corner {
+            position: absolute;
+            width: 15px; height: 15px;
+            border: 2px solid var(--neon-green);
+            pointer-events: none;
+        }
+        .c-tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+        .c-tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+        .c-bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+        .c-br { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+        h2 {
+            color: var(--neon-green);
+            margin-bottom: 35px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-size: 1.8rem;
+            text-shadow: 0 0 10px var(--neon-green);
+            position: relative;
+            display: inline-block;
+        }
+        h2::after {
+            content: "";
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 2px;
+            background: var(--neon-green);
+            box-shadow: 0 0 5px var(--neon-green);
+        }
+
+        .input-group { margin-bottom: 25px; text-align: left; }
+        .input-group label { display: block; color: var(--neon-cyan); font-size: 0.85rem; margin-bottom: 8px; letter-spacing: 1px; }
+        
+        /* 输入框样式 (严格保持不变) */
+        .input-group input {
+            width: 100%;
+            padding: 14px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #333;
+            color: #fff;
+            font-family: 'Consolas', monospace;
+            outline: none;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+        .input-group input:focus { 
+            border-color: var(--neon-green); 
+            box-shadow: 0 0 15px rgba(0,255,65,0.3), inset 0 0 5px rgba(0,255,65,0.1);
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: rgba(0, 255, 65, 0.1);
+            color: var(--neon-green);
+            font-weight: bold;
+            border: 1px solid var(--neon-green);
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-login:hover {
+            background: var(--neon-green);
+            color: #000;
+            box-shadow: 0 0 25px var(--neon-green);
+        }
+        .btn-login:active {
+            transform: scale(0.98);
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .alert {
+            background: rgba(255, 0, 60, 0.15);
+            color: #ff003c;
+            border: 1px solid #ff003c;
+            padding: 12px;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            display: none;
+            box-shadow: 0 0 10px rgba(255, 0, 60, 0.2);
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .alert-icon { font-size: 1.2em; }
+
+        .login-footer {
+            margin-top: 30px;
+            font-size: 0.75rem;
+            color: #666;
+            letter-spacing: 1px;
+        }
+        .login-footer span { color: var(--neon-cyan); }
+
+    </style>
+</head>
+<body>
+    <div class="cyber-grid-container">
+        <div class="cyber-grid"></div>
+    </div>
+    <div class="horizon-glow"></div>
+
+    <div class="particles">
+        <div class="particle p1"></div>
+        <div class="particle p2"></div>
+        <div class="particle p3"></div>
+        <div class="particle p4"></div>
+        <div class="particle p5"></div>
+        <div class="particle p6"></div>
+    </div>
+
+    <div class="login-box">
+        <div class="corner c-tl"></div>
+        <div class="corner c-tr"></div>
+        <div class="corner c-bl"></div>
+        <div class="corner c-br"></div>
+
+        <h2>System Access</h2>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert" style="display:flex;">
+                    <span class="alert-icon">⛔</span>
+                    <span>{{ messages[0] }}</span>
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="/login">
+            <div class="input-group">
+                <label>OPERATOR ID</label>
+                <input type="text" name="username" required autofocus autocomplete="off">
+            </div>
+            <div class="input-group">
+                <label>ACCESS CODE</label>
+                <input type="password" name="password" required>
+            </div>
+            <button type="submit" class="btn-login">Initialize Link</button>
+        </form>
+        
+        <div class="login-footer">
+            RPI_CORE // SECURE TERMINAL // V.1.2.5 <br>
+            STATUS: <span>WAITING FOR AUTH</span>
+        </div>
+    </div>
+</body>
+</html>

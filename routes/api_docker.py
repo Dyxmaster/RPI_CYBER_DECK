@@ -1,16 +1,18 @@
 # routes/api_docker.py
 from flask import Blueprint, jsonify, request
 from modules import docker_ctl
-
+from flask_login import login_required
 bp = Blueprint('api_docker', __name__)
 
 
 @bp.route('/api/docker/list')
+@login_required
 def docker_list():
     return jsonify(docker_ctl.get_containers())
 
 
 @bp.route('/api/docker/<action>/<cid>', methods=['GET'])  # 你现在前端用的是 GET
+@login_required
 def docker_action(action, cid):
     """
     支持的 action:
@@ -36,6 +38,7 @@ def docker_action(action, cid):
     return jsonify({"status": status, "msg": msg}), code
 
 @bp.route('/api/docker/run', methods=['POST'])
+@login_required
 def docker_run():
     """
     Body: { "image": "nginx:latest", "name": "my-nginx" }
@@ -61,10 +64,12 @@ def docker_run():
 #  新增：镜像 API ---
 
 @bp.route('/api/docker/images')
+@login_required
 def docker_images_list():
     return jsonify(docker_ctl.get_images())
 
 @bp.route('/api/docker/image/delete', methods=['POST'])
+@login_required
 def docker_image_delete():
     """
     Body: { "id": "image_short_id" }
