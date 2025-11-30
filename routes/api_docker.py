@@ -55,3 +55,25 @@ def docker_run():
         "msg": msg,
         "container": container_name
     }), code
+
+
+
+#  新增：镜像 API ---
+
+@bp.route('/api/docker/images')
+def docker_images_list():
+    return jsonify(docker_ctl.get_images())
+
+@bp.route('/api/docker/image/delete', methods=['POST'])
+def docker_image_delete():
+    """
+    Body: { "id": "image_short_id" }
+    """
+    data = request.get_json(silent=True) or {}
+    img_id = data.get("id")
+    
+    if not img_id:
+        return jsonify({"success": False, "msg": "Image ID required"}), 400
+        
+    ok, msg = docker_ctl.remove_image(img_id)
+    return jsonify({"success": ok, "msg": msg})

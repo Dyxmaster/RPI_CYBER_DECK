@@ -70,7 +70,7 @@ class DeviceManager:
             # 定义 PowerShell 命令
             cmds = {
                 "cpu": 'powershell "(Get-CimInstance Win32_Processor).Name"',
-                "gpu": 'powershell "(Get-CimInstance Win32_VideoController).Name"',
+                "gpu": 'powershell "Get-CimInstance Win32_VideoController | Where-Object { $_.Name -notmatch \'Virtual|GameViewer|Remote|DisplayLink\' } | Sort-Object @{Expression={$_.Name -match \'NVIDIA|AMD|Radeon|Arc\'}; Ascending=$false} | Select-Object -First 1 -ExpandProperty Name"',
                 "ram": 'powershell "[math]::Round((Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum).Sum / 1GB, 0)"',
                 "os":  'powershell "(Get-CimInstance Win32_OperatingSystem).Caption"'
             }

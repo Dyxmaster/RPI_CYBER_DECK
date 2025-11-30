@@ -8,13 +8,15 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/nav.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/containers.css') }}">
     <style>
-        /* ... (保留所有原有样式，并添加前次回复中的 Modal 和新功能样式) ... */
-        /* --- 表格和状态样式 --- */
+        /* ... (保留所有原有样式) ... */
+        
+        /* 复用原有样式，无需额外修改，只需要确保表格样式通用 */
         .container-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-family: monospace; }
         .container-table th { text-align: left; border-bottom: 2px solid var(--primary); padding: 10px; color: var(--primary); font-size: 14px; }
         .container-table td { padding: 15px 10px; border-bottom: 1px solid #333; color: #ccc; vertical-align: middle; }
         .container-table tr:hover { background-color: #1a1a1a; }
         
+        /* 状态徽章 */
         .status-badge { 
             padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; min-width: 70px; display: inline-block; text-align: center;
         }
@@ -23,6 +25,10 @@
         .created { background: rgba(255, 255, 0, 0.2); color: var(--yellow); border: 1px solid var(--yellow); }
         .restarting { background: rgba(0, 191, 255, 0.2); color: var(--cyan); border: 1px solid var(--cyan); }
         
+        /* 镜像 Tag 样式 */
+        .image-tag { color: var(--cyan); font-weight: bold; }
+        .image-id { color: #666; font-size: 0.9em; }
+
         .action-group { display: flex; gap: 5px; }
         .action-btn { 
             background: transparent; border: 1px solid var(--cyan); color: var(--cyan); 
@@ -35,19 +41,14 @@
         .action-btn.delete { border-color: var(--danger); color: var(--danger); }
         .action-btn.delete:hover { background: var(--danger); color: #fff; }
 
-        /* --- 顶部操作栏样式 --- */
         .top-actions { margin-bottom: 20px; display: flex; justify-content: flex-end; }
         .add-btn {
-            background-color: var(--primary);
-            color: #000;
-            padding: 8px 15px;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.2s;
+            background-color: var(--primary); color: #000; padding: 8px 15px; border: none;
+            cursor: pointer; font-weight: bold; transition: background-color 0.2s;
         }
         .add-btn:hover { background-color: #00ff41; box-shadow: 0 0 10px var(--primary); }
-        /* --- 自定义模态对话框样式 --- */
+
+        /* Modal 样式 (复用) */
         .custom-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.85); display: none; justify-content: center;
@@ -61,29 +62,18 @@
             max-width: 400px; border-radius: 5px; color: #fff; text-align: center;
             animation: fadeIn 0.3s;
         }
-        @keyframes fadeIn {
-            from { transform: scale(0.9); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
+        @keyframes fadeIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
         .modal-title { font-size: 1.5em; color: var(--yellow); margin-bottom: 10px; }
         .modal-message { font-size: 1em; color: var(--text-light, #ccc); margin-bottom: 25px; line-height: 1.5; }
-        .modal-actions button {
-            padding: 8px 20px; margin: 0 10px; cursor: pointer; font-weight: bold;
-            border: none; border-radius: 3px; transition: 0.2s;
-        }
+        .modal-actions button { padding: 8px 20px; margin: 0 10px; cursor: pointer; font-weight: bold; border: none; border-radius: 3px; transition: 0.2s; }
         .modal-btn-confirm { background-color: var(--danger); color: #fff; }
-        .modal-btn-confirm:hover { background-color: #ff4d4f; }
         .modal-btn-cancel { background-color: #555; color: #eee; }
-        .modal-btn-cancel:hover { background-color: #666; }
         .modal-result .modal-title { color: var(--primary); }
         .modal-result .modal-btn-cancel { background-color: var(--primary); color: #fff; }
-        .modal-result .modal-btn-cancel:hover { background-color: #00bcd4; }
         .input-group { margin-bottom: 15px; text-align: left; }
         .input-group label { display: block; margin-bottom: 5px; color: var(--cyan); font-weight: bold; }
-        .input-group input[type="text"] {
-            width: 100%; padding: 8px; box-sizing: border-box; background: #222;
-            border: 1px solid var(--cyan); color: #fff;
-        }
+        .input-group input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; background: #222; border: 1px solid var(--cyan); color: #fff; }
     </style>
 </head>
 <body>
@@ -100,11 +90,10 @@
 
             <div class="top-actions">
                 <button class="add-btn" onclick="showPullImageModal()">➕ 拉取/运行新容器</button>
-
             </div>
 
-            <div class="card wide">
-                <div class="card-title" style="margin-bottom: 10px;">容器列表 (Active/Inactive)</div>
+            <div class="card wide" style="margin-bottom: 30px;">
+                <div class="card-title" style="margin-bottom: 10px;">运行实例 (Containers)</div>
                 <table class="container-table">
                     <thead>
                         <tr>
@@ -114,8 +103,22 @@
                             <th style="width: 30%;">ACTIONS</th>
                         </tr>
                     </thead>
-                    <tbody id="container-list">
-                        </tbody>
+                    <tbody id="container-list"></tbody>
+                </table>
+            </div>
+
+            <div class="card wide">
+                <div class="card-title" style="margin-bottom: 10px;">本地镜像库 (Local Images)</div>
+                <table class="container-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%;">REPOSITORY:TAG</th>
+                            <th style="width: 20%;">ID</th>
+                            <th style="width: 20%;">SIZE</th>
+                            <th style="width: 20%;">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="image-list"></tbody>
                 </table>
             </div>
         </main>
@@ -125,8 +128,7 @@
         <div class="modal-content">
             <div class="modal-title" id="modalTitle"></div>
             <div class="modal-message" id="modalMessage"></div>
-            <div class="modal-actions" id="modalActions">
-                </div>
+            <div class="modal-actions" id="modalActions"></div>
         </div>
     </div>
 
@@ -151,7 +153,7 @@
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
-        // --- Modal DOM 引用 ---
+        // --- Modal DOM ---
         const modal = document.getElementById('customModal');
         const pullRunModal = document.getElementById('pullRunModal');
         const modalTitle = document.getElementById('modalTitle');
@@ -159,7 +161,7 @@
         const modalActions = document.getElementById('modalActions');
         const modalContent = modal.querySelector('.modal-content');
 
-        // --- 模态框通用函数 ---
+        // --- 通用函数 ---
         function closeModal() {
             modal.classList.remove('visible');
             modalContent.classList.remove('modal-result');
@@ -178,7 +180,9 @@
                  modalTitle.style.color = 'var(--danger)'; 
             }
             modal.classList.add('visible');
+            // 刷新所有列表
             loadContainers();
+            loadImages(); 
         }
         function showActionConfirm(id, name, type) {
             const actionText = { 'start': '启动', 'stop': '停止', 'restart': '重启', 'remove': '删除' }[type];
@@ -200,11 +204,7 @@
             document.getElementById('imageNameInput').focus();
         }
 
-        // --- 核心操作函数 ---
-
-        /**
-         * 刷新容器列表
-         */
+        // --- 容器操作 ---
         async function loadContainers() {
             try {
                 const res = await fetch('/api/docker/list');
@@ -218,18 +218,12 @@
                 }
 
                 data.forEach(c => {
-                    // 🚨 状态规范化解决显示问题 🚨
                     const statusLower = c.status.toLowerCase();
-                    let statusText = 'unknown'; // 默认
-                    if (statusLower.includes('running') || statusLower.includes('up')) {
-                        statusText = 'running';
-                    } else if (statusLower.includes('exited') || statusLower.includes('dead')) {
-                        statusText = 'exited';
-                    } else if (statusLower.includes('created')) {
-                        statusText = 'created';
-                    } else if (statusLower.includes('restarting')) {
-                        statusText = 'restarting';
-                    }
+                    let statusText = 'unknown';
+                    if (statusLower.includes('running') || statusLower.includes('up')) statusText = 'running';
+                    else if (statusLower.includes('exited') || statusLower.includes('dead')) statusText = 'exited';
+                    else if (statusLower.includes('created')) statusText = 'created';
+                    else if (statusLower.includes('restarting')) statusText = 'restarting';
 
                     const actionButtons = `
                         <div class="action-group">
@@ -242,7 +236,7 @@
                         </div>
                     `;
 
-                    const row = `
+                    tbody.innerHTML += `
                         <tr>
                             <td style="font-weight:bold">${c.name}</td>
                             <td style="font-size:12px; opacity:0.7">${c.image}</td>
@@ -250,40 +244,28 @@
                             <td>${actionButtons}</td>
                         </tr>
                     `;
-                    tbody.innerHTML += row;
                 });
             } catch (error) {
                 console.error("Failed to load containers:", error);
-                // 解决通信问题：如果连接失败，可能是因为后端路由或 Docker 服务问题
-                document.getElementById('container-list').innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: var(--danger);">🚨 无法连接到 Docker API 或服务器出错。</td></tr>';
+                document.getElementById('container-list').innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: var(--danger);">🚨 无法连接到 Docker API。</td></tr>';
             }
         }
 
-        /**
-         * 发送容器控制命令 (适配后端：使用 GET/不解析返回 JSON)
-         */
         async function action(id, name, type) {
-            closeModal(); // 关闭确认框
+            closeModal(); 
             const actionText = { 'start': '启动', 'stop': '停止', 'restart': '重启', 'remove': '删除' }[type];
-            
             try {
-                // 🚨 核心修改: 使用 GET 方法，不强制指定方法，不解析返回体 🚨
                 const res = await fetch(`/api/docker/${type}/${id}`); 
-                
                 if(res.ok) {
                     showResultModal(`✅ 成功`, `容器 ${name} 已成功执行 ${actionText}。`);
                 } else {
-                    // 即使不返回 JSON，也可以显示状态码
-                    showResultModal(`❌ 失败`, `${actionText} 操作失败。服务器返回状态码: ${res.status}`, false);
+                    showResultModal(`❌ 失败`, `${actionText} 操作失败。状态码: ${res.status}`, false);
                 }
             } catch(e) {
-                showResultModal("🚨 通信错误", "无法连接到服务器或 Docker API。", false);
+                showResultModal("🚨 通信错误", "无法连接到服务器。", false);
             }
         }
         
-        /**
-         * 拉取并运行新容器 (需要后端 Flask 路由支持 POST)
-         */
         async function pullAndRunContainer() {
             closePullRunModal();
             const image = document.getElementById('imageNameInput').value.trim();
@@ -300,8 +282,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ image: image, name: name })
                 });
-                
-                // 假设 /api/docker/run 会返回 JSON ({"success": true/false, "msg": "..."})
                 const data = await res.json(); 
                 
                 if (res.ok && data.success) {
@@ -310,13 +290,69 @@
                     showResultModal(`❌ 运行失败`, `错误信息: ${data.msg || '无法运行容器。'}`, false);
                 }
             } catch (e) {
-                showResultModal("🚨 通信错误", "无法连接到服务器或 Docker API。", false);
+                showResultModal("🚨 通信错误", "无法连接到服务器。", false);
             }
+        }
+
+        // --- ✨ 新增：镜像管理 JS ---
+
+        async function loadImages() {
+            try {
+                const res = await fetch('/api/docker/images');
+                const data = await res.json();
+                const tbody = document.getElementById('image-list');
+                tbody.innerHTML = '';
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">暂无本地镜像。</td></tr>';
+                    return;
+                }
+
+                data.forEach(img => {
+                    const row = `
+                        <tr>
+                            <td class="image-tag">${img.tag}</td>
+                            <td class="image-id">${img.id}</td>
+                            <td style="font-family:monospace; color:#aaa;">${img.size}</td>
+                            <td>
+                                <button class="action-btn delete" onclick="deleteImage('${img.id}', '${img.tag}')">DELETE IMAGE</button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            } catch (error) {
+                console.error("Failed to load images:", error);
+            }
+        }
+
+        function deleteImage(id, tag) {
+            if(!confirm(`确认要删除镜像: ${tag} 吗？\n注意：如果该镜像正在被使用，删除将失败。`)) return;
+
+            fetch('/api/docker/image/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    showResultModal("✅ 成功", `镜像 ${tag} 已删除。`);
+                } else {
+                    showResultModal("❌ 删除失败", data.msg, false);
+                }
+            })
+            .catch(e => showResultModal("🚨 错误", "通信失败", false));
         }
 
         // --- 初始化 ---
         loadContainers();
-        setInterval(loadContainers, 5000); // 每5秒刷新状态
+        loadImages(); // 加载镜像
+        
+        setInterval(() => {
+            loadContainers();
+            // loadImages(); // 镜像列表通常变化不大，可以不频繁刷新，或者设置更长间隔
+        }, 5000); 
     
     </script>
 </body>

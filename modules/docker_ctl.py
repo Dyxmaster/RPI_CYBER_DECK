@@ -106,3 +106,51 @@ def pull_and_run_container(image_name, container_name=None):
         return False, f"Docker API 错误: {first_line}", None
     except Exception as e:
         return False, f"运行容器失败: {e}", None
+
+
+
+# --- 镜像管理功能 ---
+
+def get_images():
+    if not client:
+        return []
+    
+    images_list = []
+    try:
+        for img in client.images.list():
+            # Docker 镜像大小是字节，转换成 MB
+            size_mb = round(img.attrs.get('Size', 0) / (1024 * 1024), 2)
+            created = img.attrs.get('Created', '').split('T')[0] # 简单截取日期
+            
+            # 一个镜像可能有多个 Tag (例如 nginx:latest 和 nginx:1.21 可能是同一个 ID)
+            # 如果没有 Tag (悬空镜像)，显示为 <none>
+            tags = img.tags if img.tags else ['<none>:<none>']
+            
+            for tag in tags:
+                images_list.append({
+                    'id': img.short_id.split(':')[-1], # 去掉 sha256: 前缀
+                    'tag': tag,
+                    'size': f"{size_mb} MB",
+                    'created': created
+                })
+    except Exception as e:
+        print(f"Error fetching images: {e}")
+        return []
+        
+    return images_list
+
+def remove_image(image_id):
+    if not client:
+        return False, "Docker 客户端未连接"
+    try:
+        # force=True 强制删除，防止有停止的容器占用无法删除
+        client.images.remove(image_id, force=True) 
+        return True, "镜像已删除"
+    except docker.errors.ImageNotFound:
+        return False, "镜像未找到"
+    except Exception as e:
+        # 处理 Docker 返回的错误信息
+        err_str = str(e)
+        if "conflict" in err_str.lower():
+            return False, "删除失败：镜像正在被运行中的容器使用"
+        return False, f"删除失败: {e}"
