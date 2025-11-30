@@ -9,3 +9,6 @@ docker run -d \
   -v /home/pi/.vscode:/root/.vscode \
   -v /var/run/docker.sock:/var/run/docker.sock \
   rpi-dashboard:1130
+
+# 打包指令
+docker build -t rpi-dashboard:1130 .
