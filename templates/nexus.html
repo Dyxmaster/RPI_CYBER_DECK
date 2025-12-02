@@ -8,7 +8,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     <!-- 引入导航栏样式 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/nav.css') }}">
-    
+       
+            
+
+          
     <style>
         /* --- NEXUS 页面独立样式 --- */
         body {
@@ -192,8 +195,15 @@
 
     <!-- 引用导航栏：CSS中强制它 Fixed 定位 -->
     {% include 'nav.html' %}
+ 
     
     <div class="nexus-wrapper">
+        <div style="margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;">
+            <h2 style="margin:0; font-size: 2em; letter-spacing: 3px;  ">
+                NEXUS // SYSTEM
+            </h2>
+        </div>
+        
         
         <!-- 数据仪表盘 -->
         <div class="dashboard-grid">
