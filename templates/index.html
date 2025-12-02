@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>树莓派中枢系统 // V5.0 Pro</title>
+    <title>树莓派中枢系统 // V5.1 Wifi Edition</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/nav.css') }}">
     <style>
@@ -34,48 +34,51 @@
             color: #000;
             box-shadow: 0 0 10px var(--yellow);
         }
+        /* WiFi 按钮样式 */
+        .power-btn.wifi {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .power-btn.wifi:hover {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 10px var(--primary);
+        }
+
         .header-actions {
             display: flex;
             align-items: center;
         }
         
         /* --- 4 + 2 布局优化 CSS --- */
-        /* 强制 4 列布局 */
         @media (min-width: 1400px) {
             .cards-grid {
                 grid-template-columns: repeat(4, 1fr); 
             }
         }
-        
-        /* 让底部的两个卡片在宽屏下占据 2 列 */
         @media (min-width: 1400px) {
             .card.span-2-columns {
                 grid-column: span 2;
             }
         }
 
-        /* --- 自定义模态对话框样式 --- */
+        /* --- 通用模态框基础样式 --- */
         .custom-modal {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.85); /* 半透明黑色背景 */
-            display: none; /* 默认隐藏 */
-            justify-content: center;
-            align-items: center;
-            z-index: 1000; /* 确保在最上层 */
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center; align-items: center;
+            z-index: 1000;
             backdrop-filter: blur(5px);
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
         }
         .custom-modal.visible {
-            display: flex;
-            opacity: 1;
+            display: flex; opacity: 1;
         }
         .modal-content {
-            background-color: var(--background-darker); /* 假设你的背景色 */
+            background-color: var(--background-darker); /* 确保你有这个变量，或者用 #111 */
             border: 1px solid var(--primary);
             box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
             padding: 25px;
@@ -85,56 +88,88 @@
             color: #fff;
             text-align: center;
             animation: fadeIn 0.3s;
+            position: relative;
         }
         @keyframes fadeIn {
             from { transform: scale(0.9); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
         }
         .modal-title {
-            font-size: 1.5em;
-            color: var(--yellow);
-            margin-bottom: 10px;
+            font-size: 1.5em; color: var(--yellow); margin-bottom: 10px;
         }
         .modal-message {
-            font-size: 1em;
-            color: var(--text-light);
-            margin-bottom: 25px;
-            line-height: 1.5;
+            font-size: 1em; color: var(--text-light); margin-bottom: 25px; line-height: 1.5;
         }
         .modal-actions button {
-            padding: 8px 20px;
-            margin: 0 10px;
+            padding: 8px 20px; margin: 0 10px; cursor: pointer;
+            font-weight: bold; border: none; border-radius: 3px; transition: 0.2s;
+        }
+        .modal-btn-confirm { background-color: var(--danger); color: #fff; }
+        .modal-btn-confirm:hover { background-color: #ff4d4f; }
+        .modal-btn-cancel { background-color: #555; color: #eee; }
+        .modal-btn-cancel:hover { background-color: #666; }
+
+        /* --- WiFi 专属模态框样式 --- */
+        #wifiModal .modal-content {
+            max-width: 500px;
+            text-align: left;
+        }
+        .wifi-list-container {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+            background: #000;
+        }
+        .wifi-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #222;
             cursor: pointer;
+            transition: background 0.2s;
+        }
+        .wifi-item:hover {
+            background: rgba(0, 255, 255, 0.1);
+        }
+        .wifi-item.active {
+            border-left: 3px solid var(--green);
+            background: rgba(0, 255, 0, 0.1);
+        }
+        .wifi-ssid {
             font-weight: bold;
-            border: none;
-            border-radius: 3px;
-            transition: 0.2s;
-        }
-        .modal-btn-confirm {
-            background-color: var(--danger);
-            color: #fff;
-        }
-        .modal-btn-confirm:hover {
-            background-color: #ff4d4f;
-        }
-        .modal-btn-cancel {
-            background-color: #555;
-            color: #eee;
-        }
-        .modal-btn-cancel:hover {
-            background-color: #666;
-        }
-        /* 针对操作结果的提示 */
-        .modal-result .modal-title {
             color: var(--primary);
         }
-        .modal-result .modal-btn-cancel { /* '确定' 按钮使用取消按钮的样式 */
-            background-color: var(--primary);
+        .wifi-info {
+            font-size: 0.8em;
+            color: #888;
+        }
+        .wifi-input-group {
+            display: none; /* 默认隐藏，点击列表项后显示 */
+            margin-top: 15px;
+            border-top: 1px solid #333;
+            padding-top: 15px;
+        }
+        .wifi-input-group input {
+            width: 100%;
+            padding: 10px;
+            background: #111;
+            border: 1px solid var(--primary);
             color: #fff;
+            margin-bottom: 10px;
         }
-        .modal-result .modal-btn-cancel:hover {
-            background-color: #00bcd4;
+        .loader {
+            display: inline-block;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--primary);
+            border-radius: 50%;
+            width: 16px; height: 16px;
+            animation: spin 1s linear infinite;
+            margin-right: 5px;
         }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
     </style>
 </head>
 <body>
@@ -151,6 +186,7 @@
                 <header>
                     <h2>实时硬件监控</h2>
                     <div class="header-actions">
+                        <button class="power-btn wifi" onclick="openWifiModal()">📶 WiFi 设置</button>
                         <button class="power-btn reboot" onclick="showSysConfirm('reboot')">⚡ 重启系统</button>
                         <button class="power-btn" onclick="showSysConfirm('shutdown')">🛑 立即关机</button>
                         <div class="live-tag" style="margin-left: 15px;">LIVE DATA</div>
@@ -201,9 +237,9 @@
                         <div class="donut-chart">
                             <svg viewBox="0 0 36 36">
                                 <path class="circle-bg"
-                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                                 <path class="circle" id="disk-circle" stroke-dasharray="0, 100"
-                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                             </svg>
                             <div class="donut-text" id="disk-val">--%</div>
                         </div>
@@ -262,11 +298,11 @@
             </div>
 
             <div id="network" class="page">
-                <header><h2>网络流量分析</h2></header>
-                <div class="card wide">
-                    <div class="card-title">当前 IP 地址</div>
-                    <h1 class="text-cyan" id="ip-addr">Loading...</h1>
-                </div>
+                 <header><h2>网络流量分析</h2></header>
+                 <div class="card wide">
+                     <div class="card-title">当前 IP 地址</div>
+                     <h1 class="text-cyan" id="ip-addr">Loading...</h1>
+                 </div>
             </div>
 
             <div id="terminal" class="page">
@@ -285,7 +321,31 @@
             <div class="modal-title" id="modalTitle"></div>
             <div class="modal-message" id="modalMessage"></div>
             <div class="modal-actions" id="modalActions">
+            </div>
+        </div>
+    </div>
+
+    <div id="wifiModal" class="custom-modal">
+        <div class="modal-content">
+            <div class="modal-title">无线网络扫描</div>
+            <div class="modal-message" style="margin-bottom: 10px;">选择一个网络进行连接</div>
+            
+            <div id="wifiList" class="wifi-list-container">
+                <div style="padding: 20px;">正在扫描附近信号... <div class="loader"></div></div>
+            </div>
+            
+            <div id="wifiInputGroup" class="wifi-input-group">
+                <div style="text-align: left; color: var(--primary); margin-bottom: 5px;">
+                    正在连接: <span id="selectedSsid" style="color: #fff; font-weight: bold;"></span>
                 </div>
+                <input type="password" id="wifiPassword" placeholder="输入 WiFi 密码" />
+                <button class="power-btn wifi" onclick="connectWifi()" style="width: 100%; margin: 0;">🔗 连接网络</button>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 20px; border-top: 1px solid #333; padding-top: 15px;">
+                <button class="modal-btn-cancel" onclick="closeWifiModal()">关闭</button>
+                <button class="modal-btn-confirm" onclick="refreshWifiList()">🔄 重新扫描</button>
+            </div>
         </div>
     </div>
 
@@ -299,35 +359,26 @@
             if(target) target.classList.add('active');
         }
 
+        // --- 系统确认模态框逻辑 ---
         const modal = document.getElementById('customModal');
         const modalTitle = document.getElementById('modalTitle');
         const modalMessage = document.getElementById('modalMessage');
         const modalActions = document.getElementById('modalActions');
         const modalContent = modal.querySelector('.modal-content');
 
-        // 关闭模态框
         function closeModal() {
             modal.classList.remove('visible');
             modalContent.classList.remove('modal-result');
         }
 
-        /**
-         * 显示操作结果提示框
-         * @param {string} title - 标题
-         * @param {string} message - 消息内容
-         */
         function showResultModal(title, message) {
             modalTitle.textContent = title;
             modalMessage.textContent = message;
             modalActions.innerHTML = `<button class="modal-btn-cancel" onclick="closeModal()">确定</button>`;
-            modalContent.classList.add('modal-result'); // 添加结果样式
+            modalContent.classList.add('modal-result');
             modal.classList.add('visible');
         }
 
-        /**
-         * 显示确认操作模态框
-         * @param {string} type - 'reboot' 或 'shutdown'
-         */
         function showSysConfirm(type) {
             const actionName = type === 'reboot' ? '重启' : '关机';
             modalTitle.textContent = ` 高危操作警告 ⚠️`;
@@ -337,26 +388,124 @@
                 <button class="modal-btn-cancel" onclick="closeModal()">取消</button>
                 <button class="modal-btn-confirm" onclick="sysAction('${type}')">${actionName}</button>
             `;
-            modalContent.classList.remove('modal-result'); // 移除结果样式
+            modalContent.classList.remove('modal-result');
             modal.classList.add('visible');
         }
 
-        // ✨ 系统操作函数：调用后端 API (不再处理弹窗，只处理 API 调用) ✨
         async function sysAction(type) {
-            closeModal(); // 发送请求前先关闭确认框
+            closeModal();
             const actionName = type === 'reboot' ? '重启' : '关机';
-
             try {
                 const res = await fetch(`/api/system/${type}`, { method: 'POST' });
                 const data = await res.json();
-                
                 if(res.ok) {
                     showResultModal(`✅ ${actionName} 指令发送成功`, `${data.msg}\n页面即将断开连接。`);
                 } else {
                     showResultModal(`❌ ${actionName} 指令失败`, `操作失败: ${data.msg}`);
                 }
             } catch(e) {
-                showResultModal("🚨 通信错误", "无法连接到服务器 (可能是权限不足或设备已离线)。");
+                showResultModal("🚨 通信错误", "无法连接到服务器。");
+            }
+        }
+
+        // --- ✨ WiFi 模态框逻辑 (新增) ✨ ---
+        const wifiModal = document.getElementById('wifiModal');
+        const wifiListEl = document.getElementById('wifiList');
+        const wifiInputGroup = document.getElementById('wifiInputGroup');
+        const selectedSsidEl = document.getElementById('selectedSsid');
+        const wifiPasswordInput = document.getElementById('wifiPassword');
+        let currentSsid = '';
+
+        function openWifiModal() {
+            wifiModal.classList.add('visible');
+            wifiInputGroup.style.display = 'none'; // 隐藏输入框
+            refreshWifiList(); // 打开时自动扫描
+        }
+
+        function closeWifiModal() {
+            wifiModal.classList.remove('visible');
+        }
+
+        async function refreshWifiList() {
+            wifiListEl.innerHTML = '<div style="padding: 20px;">正在扫描附近信号... <div class="loader"></div></div>';
+            wifiInputGroup.style.display = 'none';
+            
+            try {
+                const res = await fetch('/api/wifi/scan');
+                const data = await res.json();
+                
+                if(data.status === 'ok') {
+                    renderWifiList(data.networks);
+                } else {
+                    wifiListEl.innerHTML = `<div style="color:var(--danger); padding:20px;">扫描失败: ${data.msg}</div>`;
+                }
+            } catch (e) {
+                wifiListEl.innerHTML = `<div style="color:var(--danger); padding:20px;">请求失败: 无法连接服务器</div>`;
+            }
+        }
+
+        function renderWifiList(networks) {
+            if(networks.length === 0) {
+                wifiListEl.innerHTML = '<div style="padding: 20px;">未发现网络</div>';
+                return;
+            }
+            
+            let html = '';
+            networks.forEach(net => {
+                const activeClass = net.active ? 'active' : '';
+                const lockIcon = net.security ? '🔒' : '';
+                html += `
+                    <div class="wifi-item ${activeClass}" onclick="selectWifi('${net.ssid}')">
+                        <div>
+                            <div class="wifi-ssid">${net.ssid} ${net.active ? '(当前连接)' : ''}</div>
+                            <div class="wifi-info">信号: ${net.signal}% | 安全: ${net.security || 'OPEN'}</div>
+                        </div>
+                        <div>${lockIcon}</div>
+                    </div>
+                `;
+            });
+            wifiListEl.innerHTML = html;
+        }
+
+        function selectWifi(ssid) {
+            currentSsid = ssid;
+            selectedSsidEl.textContent = ssid;
+            wifiInputGroup.style.display = 'block';
+            wifiPasswordInput.value = ''; // 清空密码
+            wifiPasswordInput.focus();
+        }
+
+        async function connectWifi() {
+            const password = wifiPasswordInput.value;
+            if(!currentSsid) return;
+            // 简单的校验，如果是 Open 网络可能不需要密码，这里假设都需要
+            
+            // 显示加载状态
+            const btn = document.querySelector('#wifiInputGroup button');
+            const originalText = btn.textContent;
+            btn.textContent = '连接中...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/wifi/connect', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ ssid: currentSsid, password: password })
+                });
+                const data = await res.json();
+                
+                closeWifiModal(); // 关闭 WiFi 弹窗
+                if (res.ok) {
+                    showResultModal('✅ 连接成功', `已连接到 ${currentSsid}。\nIP 地址可能会变更，请注意检查。`);
+                } else {
+                    showResultModal('❌ 连接失败', data.msg);
+                }
+            } catch (e) {
+                closeWifiModal();
+                showResultModal('🚨 错误', '发送连接请求失败。');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
             }
         }
     </script>
