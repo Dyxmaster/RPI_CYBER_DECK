@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS // INTELLIGENCE HUB</title>
+    <!-- 引入基础样式 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <!-- 引入导航栏样式 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav.css') }}">
+    
+    <style>
+        /* --- NEXUS 页面独立样式 --- */
+        body {
+            background-color: #050a10;
+            color: #eee;
+            font-family: 'Consolas', 'Monaco', monospace;
+            overflow: hidden; /* 防止出现双滚动条 */
+            margin: 0;
+            padding: 0;
+        }
+
+        /* [关键修复] 强制固定导航栏位置 */
+        /* 因为本页面脱离了原来的 flex 容器，必须手动固定 sidebar */
+        .cyber-sidebar {
+            position: fixed !important; /* 最高优先级固定 */
+            top: 0;
+            left: 0;
+            width: 260px;
+            height: 100vh;
+            z-index: 9999; /* 确保在最上层 */
+            background-color: #020406; /* 防止透明背景导致透视 */
+            border-right: 1px solid #1f2937;
+        }
+        
+        /* 主容器：留出左侧导航栏的宽度 */
+        .nexus-wrapper {
+            margin-left: 260px; /* 给导航栏留位置 */
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* --- 以下是原来的 NEXUS 样式，保持不变 --- */
+
+        /* 上半部分：仪表盘 (35% 高度) */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr;
+            gap: 20px;
+            height: 35vh;
+        }
+
+        .n-card {
+            background: rgba(13, 17, 23, 0.85);
+            border: 1px solid #1f2937;
+            border-top: 2px solid var(--primary);
+            border-radius: 4px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .n-header {
+            font-size: 12px;
+            color: var(--primary);
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #1f2937;
+            padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* 天气模块 */
+        .weather-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        .w-icon { font-size: 48px; margin-bottom: 5px; text-shadow: 0 0 15px var(--primary); }
+        .w-temp { font-size: 36px; font-weight: bold; color: #fff; }
+        .w-cond { color: var(--text-gray); font-size: 14px; }
+
+        /* 任务模块 */
+        .task-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+        .task-item {
+            padding: 8px;
+            border-bottom: 1px solid #1f2937;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 13px;
+        }
+        .task-item:hover { background: rgba(0, 255, 204, 0.05); color: var(--primary); }
+        .task-item::before { content: "[ ] "; color: #555; font-family: monospace; }
+        .task-item:hover::before { content: "[x] "; color: var(--primary); }
+        
+        .task-input {
+            background: #000;
+            border: 1px solid #333;
+            color: #fff;
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        /* 新闻模块 */
+        .news-item {
+            margin-bottom: 10px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .news-item a { color: #aaa; text-decoration: none; display: block; }
+        .news-item a:hover { color: var(--yellow); }
+
+        /* 下半部分：AI 对话终端 */
+        .terminal-box {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #333;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .term-header {
+            background: #111;
+            padding: 5px 15px;
+            font-size: 11px;
+            color: #666;
+            border-bottom: 1px solid #333;
+        }
+
+        .chat-history {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            font-size: 14px;
+        }
+
+        .msg { margin-bottom: 15px; line-height: 1.5; max-width: 90%; }
+        .msg.ai { color: var(--primary); text-shadow: 0 0 2px rgba(0, 255, 204, 0.3); }
+        .msg.user { color: #fff; text-align: right; margin-left: auto; border-right: 2px solid var(--yellow); padding-right: 10px; }
+        
+        .input-area {
+            padding: 15px;
+            background: #050505;
+            border-top: 1px solid #333;
+            display: flex;
+            align-items: center;
+        }
+        .prompt { color: var(--green); margin-right: 10px; }
+        #chatInput {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            outline: none;
+            font-family: inherit;
+            font-size: 16px;
+        }
+
+        @media (max-width: 1000px) {
+            .cyber-sidebar { display: none; } /* 移动端暂时隐藏侧边栏 */
+            .nexus-wrapper { margin-left: 0; }
+            .dashboard-grid { grid-template-columns: 1fr; height: auto; }
+            .n-card { min-height: 200px; margin-bottom: 10px; }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; }
+    </style>
+</head>
+<body>
+
+    <!-- 引用导航栏：CSS中强制它 Fixed 定位 -->
+    {% include 'nav.html' %}
+    
+    <div class="nexus-wrapper">
+        
+        <!-- 数据仪表盘 -->
+        <div class="dashboard-grid">
+            <!-- 天气 -->
+            <div class="n-card">
+                <div class="n-header">/// ATMOSPHERIC DATA</div>
+                <div class="weather-box">
+                    <div class="w-icon" id="w-icon">🛰️</div>
+                    <div class="w-temp"><span id="w-temp">--</span>°C</div>
+                    <div class="w-cond" id="w-cond">SCANNING...</div>
+                </div>
+            </div>
+
+            <!-- 任务 -->
+            <div class="n-card">
+                <div class="n-header">
+                    <span>/// MISSION PROTOCOLS</span>
+                    <span id="task-count" style="color:#666">0 ACTIVE</span>
+                </div>
+                <div class="task-list" id="taskList">
+                    <!-- JS 填充 -->
+                </div>
+                <input type="text" class="task-input" id="taskInput" placeholder="+ 添加指令 (Enter)...">
+            </div>
+
+            <!-- 新闻 -->
+            <div class="n-card">
+                <div class="n-header">/// GLOBAL INTEL</div>
+                <div id="newsList" style="margin-top: 10px;">
+                    <!-- JS 填充 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 终端对话框 -->
+        <div class="terminal-box">
+            <div class="term-header">NEXUS_CORE_V9 // SECURE CONNECTION ESTABLISHED</div>
+            <div class="chat-history" id="chatHistory">
+                <div class="msg ai">
+                    > 系统启动中...<br>
+                    > 正在同步传感器数据...<br>
+                    > <strong>NEXUS 在线。指挥官，请指示。</strong>
+                </div>
+            </div>
+            <div class="input-area">
+                <span class="prompt">root@nexus:~$</span>
+                <input type="text" id="chatInput" autocomplete="off" autofocus>
+            </div>
+        </div>
+
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // --- 初始化 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initNexus();
+            
+            document.getElementById('chatInput').addEventListener('keypress', (e) => {
+                if(e.key === 'Enter') sendChat();
+            });
+            document.getElementById('taskInput').addEventListener('keypress', (e) => {
+                if(e.key === 'Enter') addTask();
+            });
+        });
+
+        // --- 核心逻辑 ---
+
+        async function initNexus() {
+            appendMsg('ai', '正在生成今日战术简报...', true);
+            try {
+                const res = await fetch('/api/nexus/init');
+                const json = await res.json();
+                
+                if(json.status === 'ok') {
+                    const data = json.data;
+                    document.getElementById('w-temp').textContent = data.weather.temp;
+                    document.getElementById('w-cond').textContent = data.weather.condition;
+                    document.getElementById('w-icon').textContent = getWeatherIcon(data.weather.condition);
+                    renderTasks(data.tasks);
+                    const newsHtml = data.news.map(n => 
+                        `<div class="news-item">► <a href="${n.link}" target="_blank">${n.title}</a></div>`
+                    ).join('');
+                    document.getElementById('newsList').innerHTML = newsHtml;
+                    typeWriter(data.ai_msg);
+                }
+            } catch (e) {
+                appendMsg('ai', 'ERROR: 无法连接至核心数据库。');
+            }
+        }
+
+        async function sendChat() {
+            const input = document.getElementById('chatInput');
+            const val = input.value.trim();
+            if(!val) return;
+
+            appendMsg('user', val);
+            input.value = '';
+            
+            const loadId = appendMsg('ai', 'COMPUTING...');
+            
+            try {
+                const res = await fetch('/api/nexus/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ msg: val })
+                });
+                const json = await res.json();
+                
+                document.getElementById(loadId).remove();
+                typeWriter(json.reply);
+                
+                if(val.includes('添加') || val.includes('完成')) refreshTasks();
+                
+            } catch(e) {
+                document.getElementById(loadId).textContent = "COMM ERROR";
+            }
+        }
+
+        async function addTask() {
+            const input = document.getElementById('taskInput');
+            const val = input.value.trim();
+            if(!val) return;
+
+            const res = await fetch('/api/nexus/task/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ content: val })
+            });
+            const json = await res.json();
+            renderTasks(json.tasks);
+            input.value = '';
+        }
+
+        async function completeTask(id) {
+            const res = await fetch('/api/nexus/task/complete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: id })
+            });
+            const json = await res.json();
+            renderTasks(json.tasks);
+        }
+        
+        async function refreshTasks() {
+            const res = await fetch('/api/nexus/task/add', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({content: ""})
+            });
+            const json = await res.json();
+            if(json.tasks) renderTasks(json.tasks);
+        }
+
+        // --- 工具函数 ---
+
+        function renderTasks(tasks) {
+            const list = document.getElementById('taskList');
+            document.getElementById('task-count').textContent = `${tasks.length} ACTIVE`;
+            
+            if(tasks.length === 0) {
+                list.innerHTML = '<div style="color:#555; padding:10px; font-style:italic;">暂无待办协议</div>';
+                return;
+            }
+            list.innerHTML = tasks.map(t => `
+                <div class="task-item" onclick="completeTask(${t.id})">
+                    ${t.content}
+                </div>
+            `).join('');
+        }
+
+        function appendMsg(role, html, isTemp=false) {
+            const box = document.getElementById('chatHistory');
+            const div = document.createElement('div');
+            div.className = `msg ${role}`;
+            div.innerHTML = html;
+            div.id = 'msg-' + Date.now();
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+            return div.id;
+        }
+
+        function typeWriter(text) {
+            const box = document.getElementById('chatHistory');
+            const div = document.createElement('div');
+            div.className = 'msg ai';
+            box.appendChild(div);
+            
+            let i = 0;
+            function type() {
+                if (i < text.length) {
+                    div.innerHTML += text.charAt(i);
+                    i++;
+                    box.scrollTop = box.scrollHeight;
+                    setTimeout(type, 20);
+                }
+            }
+            type();
+        }
+
+        function getWeatherIcon(cond) {
+            if(cond.includes('雨')) return '🌧️';
+            if(cond.includes('雷')) return '⚡';
+            if(cond.includes('云')) return '☁️';
+            return '☀️';
+        }
+    </script>
+</body>
+</html>

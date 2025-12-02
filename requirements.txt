@@ -5,3 +5,12 @@ docker
 wakeonlan
 paramiko
 Flask-Login
+zhipuai 
+feedparser 
+requests
+sniffio 
+h11 
+httpcore 
+httpx
+python-dotenv 
+feedparser

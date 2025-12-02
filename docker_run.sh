@@ -12,3 +12,4 @@ docker run -d \
 
 # 打包指令
 docker build -t rpi-dashboard:1130 .
+docker build -t rpi-dashboard:1202 .
