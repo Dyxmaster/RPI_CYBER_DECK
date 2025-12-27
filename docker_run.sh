@@ -1,5 +1,5 @@
 docker run -d \
-  --name my-dashboardv-1203 \
+  --name my-dashboardv-1227 \
   --restart always \
   --pid host \
   --privileged \
@@ -8,8 +8,9 @@ docker run -d \
   -v /home/pi/.vscode-server:/root/.vscode-server \
   -v /home/pi/.vscode:/root/.vscode \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  rpi-dashboard:1203
+  rpi-dashboard:1227
 
 # 打包指令
 docker build -t rpi-dashboard:1130 .
 docker build -t rpi-dashboard:1202 .
+docker build -t rpi-dashboard:1227 .

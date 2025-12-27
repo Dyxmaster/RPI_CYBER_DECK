@@ -18,14 +18,41 @@ class DeviceManager:
     def save_devices(self):
         with open(DATA_FILE, 'w') as f: json.dump(self.devices, f, indent=4)
 
-    def edit_device(self, device_id, name, ip, ssh_user, ssh_pass, mac): # ✨ 增加 mac 参数
+    # --- ✨ 新增：穿透 Docker 执行宿主机命令的辅助函数 ---
+    def run_host_cmd(self, cmd_list):
+        """
+        判断是否在 Docker 中，如果是，则使用 nsenter 穿透到宿主机执行命令。
+        """
+        # 判断是否在 Docker 环境 (检查 /.dockerenv 文件)
+        is_docker = os.path.exists('/.dockerenv')
+        
+        if is_docker:
+            # Docker 模式：使用 nsenter 进入宿主机 (PID 1) 的命名空间
+            # 注意：这要求 Docker 容器启动时加了 --privileged 和 --pid=host 参数
+            prefix = ['nsenter', '--target', '1', '--mount', '--uts', '--ipc', '--net', '--pid', '--']
+            full_cmd = prefix + cmd_list
+        else:
+            # 裸机模式：直接使用 sudo
+            full_cmd = ['sudo'] + cmd_list
+
+        try:
+            # 执行命令
+            subprocess.run(full_cmd, check=True, capture_output=True, text=True)
+            return True, "执行成功"
+        except subprocess.CalledProcessError as e:
+            return False, f"命令失败: {e.stderr.strip() if e.stderr else str(e)}"
+        except Exception as e:
+            return False, f"执行错误: {str(e)}"
+    # ------------------------------------------------
+
+    def edit_device(self, device_id, name, ip, ssh_user, ssh_pass, mac): 
             for d in self.devices:
                 if str(d['id']) == str(device_id):
                     d['name'] = name
                     d['ip'] = ip
                     d['ssh_user'] = ssh_user
                     d['ssh_pass'] = ssh_pass
-                    d['mac'] = mac # ✨ 保存 MAC 到数据库
+                    d['mac'] = mac 
                     self.save_devices()
                     return True
             return False
@@ -35,7 +62,6 @@ class DeviceManager:
             "id": len(self.devices) + 1,
             "name": name, "ip": ip, "mac": self.resolve_mac(ip) or "",
             "ssh_user": "", "ssh_pass": "",
-            # 扩展硬件信息字段
             "cpu_name": "Unknown", "gpu_name": "Unknown",
             "ram_size": "Unknown", "os_ver": "Unknown"
         }
@@ -55,7 +81,6 @@ class DeviceManager:
         except:
             return {"online": False, "latency": 0}
 
-# ✨ 修复版：自动兼容 GBK/UTF-8 编码
     def fetch_hardware_info(self, device_id):
         dev = next((d for d in self.devices if str(d['id']) == str(device_id)), None)
         if not dev or not dev.get('ssh_user'):
@@ -67,7 +92,6 @@ class DeviceManager:
         try:
             ssh.connect(dev['ip'], username=dev['ssh_user'], password=dev['ssh_pass'], timeout=5)
             
-            # 定义 PowerShell 命令
             cmds = {
                 "cpu": 'powershell "(Get-CimInstance Win32_Processor).Name"',
                 "gpu": 'powershell "Get-CimInstance Win32_VideoController | Where-Object { $_.Name -notmatch \'Virtual|GameViewer|Remote|DisplayLink\' } | Sort-Object @{Expression={$_.Name -match \'NVIDIA|AMD|Radeon|Arc\'}; Ascending=$false} | Select-Object -First 1 -ExpandProperty Name"',
@@ -79,23 +103,15 @@ class DeviceManager:
             for key, cmd in cmds.items():
                 stdin, stdout, stderr = ssh.exec_command(cmd)
                 raw_bytes = stdout.read()
-                
-                # --- 核心修复开始：智能解码 ---
                 try:
-                    # 1. 优先尝试 GBK (针对中文 Windows)
                     decoded_str = raw_bytes.decode('gbk').strip()
                 except UnicodeDecodeError:
                     try:
-                        # 2. 如果失败，尝试 UTF-8
                         decoded_str = raw_bytes.decode('utf-8').strip()
                     except:
-                        # 3. 实在不行，强制忽略错误，防止崩溃
                         decoded_str = raw_bytes.decode('utf-8', errors='ignore').strip()
-                # --- 核心修复结束 ---
-
                 results[key] = decoded_str
 
-            # 更新数据
             dev['cpu_name'] = results.get('cpu', 'N/A')
             dev['gpu_name'] = results.get('gpu', 'N/A')
             dev['ram_size'] = f"{results.get('ram', '?')} GB"
@@ -108,40 +124,41 @@ class DeviceManager:
             return False, f"SSH 错误: {str(e)}"
 
     def power_control(self, device_id, action):
-            dev = next((d for d in self.devices if str(d['id']) == str(device_id)), None)
-            if not dev: return False, "设备不存在"
+        dev = next((d for d in self.devices if str(d['id']) == str(device_id)), None)
+        if not dev: return False, "设备不存在"
 
-            # --- 修改区域开始 ---
-            if action == 'wake':
-                if not dev['mac']: return False, "MAC 地址未知"
-                
+        if action == 'wake':
+            if not dev['mac']: return False, "MAC 地址未知"
+            
+            # --- ✨ 修改：使用 run_host_cmd 穿透到宿主机执行 etherwake ---
+            # 这样就会调用宿主机上的 etherwake，利用宿主机的 eth0 发送
+            success, msg = self.run_host_cmd(['etherwake', '-i', 'eth0', dev['mac']])
+            
+            if success:
+                return True, "WOL (Host-Etherwake) 发送成功"
+            else:
+                # 如果穿透失败（比如没权限），回退到普通广播
+                print(f"Etherwake failed: {msg}, trying broadcast...")
                 try:
-                    # 方案 A: 使用 etherwake 强制指定 eth0 接口发送 (针对直连最稳)
-                    # 注意: 需要树莓派安装 etherwake (sudo apt install etherwake)
-                    subprocess.run(['sudo', 'etherwake', '-i', 'eth0', dev['mac']], check=True)
-                    return True, "WOL 信号已通过 eth0 接口发送"
+                    send_magic_packet(dev['mac'])
+                    return True, "Etherwake 失败，已使用广播模式"
                 except Exception as e:
-                    # 方案 B: 如果 etherwake 失败 (比如没装软件)，回退到原来的广播模式
-                    try:
-                        send_magic_packet(dev['mac'])
-                        return True, "Etherwake 失败，已使用普通广播模式发送"
-                    except Exception as e2:
-                        return False, f"WOL 发送失败: {str(e)} / {str(e2)}"
-            # --- 修改区域结束 ---
-            
-            if not dev.get('ssh_user'): return False, "SSH 未配置"
+                    return False, f"WOL 发送失败: {str(e)}"
+            # ----------------------------------------------------------
+        
+        if not dev.get('ssh_user'): return False, "SSH 未配置"
 
-            cmd = "shutdown /s /t 0" if action == 'shutdown' else "shutdown /r /t 0"
-            
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            try:
-                ssh.connect(dev['ip'], username=dev['ssh_user'], password=dev['ssh_pass'], timeout=3)
-                ssh.exec_command(cmd)
-                ssh.close()
-                return True, f"指令 {action} 发送成功"
-            except Exception as e:
-                return False, f"SSH 失败: {str(e)}"
+        cmd = "shutdown /s /t 0" if action == 'shutdown' else "shutdown /r /t 0"
+        
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            ssh.connect(dev['ip'], username=dev['ssh_user'], password=dev['ssh_pass'], timeout=3)
+            ssh.exec_command(cmd)
+            ssh.close()
+            return True, f"指令 {action} 发送成功"
+        except Exception as e:
+            return False, f"SSH 失败: {str(e)}"
 
     def resolve_mac(self, ip):
         try:
