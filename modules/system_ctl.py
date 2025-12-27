@@ -71,5 +71,13 @@ def scan_wifi():
     return True, networks
 
 def connect_wifi(ssid, password):
-    cmd = ['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', password]
+    # --- 修改开始 ---
+    # 如果有密码，拼接带密码的命令
+    if password:
+        cmd = ['nmcli', 'dev', 'wifi', 'connect', ssid, 'password', password]
+    else:
+        # 如果密码为空（Open 网络），直接连接 SSID，不带 password 参数
+        cmd = ['nmcli', 'dev', 'wifi', 'connect', ssid]
+    # --- 修改结束 ---
+    
     return run_host_cmd(cmd)

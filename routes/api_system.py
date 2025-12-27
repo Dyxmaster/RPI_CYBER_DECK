@@ -40,8 +40,14 @@ def wifi_connect():
     ssid = req_data.get('ssid')
     password = req_data.get('password')
     
-    if not ssid or not password:
-        return jsonify({"status": "error", "msg": "缺少 SSID 或密码"}), 400
+    # --- 修改前 ---
+    # if not ssid or not password:
+    #    return jsonify({"status": "error", "msg": "缺少 SSID 或密码"}), 400
+
+    # --- 修改后 ---
+    # 只检查 SSID 是否存在，密码如果是空字符串也是允许的（针对 Open 网络）
+    if not ssid:
+        return jsonify({"status": "error", "msg": "缺少 SSID"}), 400
 
     success, msg = system_ctl.connect_wifi(ssid, password)
     

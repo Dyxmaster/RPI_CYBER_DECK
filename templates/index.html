@@ -408,13 +408,14 @@
             }
         }
 
-        // --- ✨ WiFi 模态框逻辑 (新增) ✨ ---
+        // --- ✨ WiFi 模态框逻辑 (已修复 Open 网络支持) ✨ ---
         const wifiModal = document.getElementById('wifiModal');
         const wifiListEl = document.getElementById('wifiList');
         const wifiInputGroup = document.getElementById('wifiInputGroup');
         const selectedSsidEl = document.getElementById('selectedSsid');
         const wifiPasswordInput = document.getElementById('wifiPassword');
         let currentSsid = '';
+        let currentSecurity = 'OPEN'; // 新增：记录当前网络的安全类型
 
         function openWifiModal() {
             wifiModal.classList.add('visible');
@@ -454,8 +455,12 @@
             networks.forEach(net => {
                 const activeClass = net.active ? 'active' : '';
                 const lockIcon = net.security ? '🔒' : '';
+                // ⚠️ 关键修改：提取安全类型，若无则默认为 OPEN
+                const securityType = net.security ? net.security : 'OPEN';
+                
+                // 将 securityType 传递给 selectWifi
                 html += `
-                    <div class="wifi-item ${activeClass}" onclick="selectWifi('${net.ssid}')">
+                    <div class="wifi-item ${activeClass}" onclick="selectWifi('${net.ssid}', '${securityType}')">
                         <div>
                             <div class="wifi-ssid">${net.ssid} ${net.active ? '(当前连接)' : ''}</div>
                             <div class="wifi-info">信号: ${net.signal}% | 安全: ${net.security || 'OPEN'}</div>
@@ -467,18 +472,36 @@
             wifiListEl.innerHTML = html;
         }
 
-        function selectWifi(ssid) {
+        // ⚠️ 关键修改：接收 security 参数
+        function selectWifi(ssid, security) {
             currentSsid = ssid;
+            currentSecurity = security; // 记录状态
             selectedSsidEl.textContent = ssid;
+            
             wifiInputGroup.style.display = 'block';
-            wifiPasswordInput.value = ''; // 清空密码
-            wifiPasswordInput.focus();
+            
+            // 判断是否隐藏密码框
+            if (security === 'OPEN' || security === null || security === '') {
+                wifiPasswordInput.style.display = 'none'; // 隐藏
+                wifiPasswordInput.value = ''; // 清空
+            } else {
+                wifiPasswordInput.style.display = 'block'; // 显示
+                wifiPasswordInput.value = ''; 
+                wifiPasswordInput.focus();
+            }
         }
 
         async function connectWifi() {
-            const password = wifiPasswordInput.value;
+            // ⚠️ 关键修改：根据安全类型决定密码
+            const password = (currentSecurity === 'OPEN') ? '' : wifiPasswordInput.value;
+            
             if(!currentSsid) return;
-            // 简单的校验，如果是 Open 网络可能不需要密码，这里假设都需要
+
+            // ⚠️ 校验逻辑：只有加密网络且没填密码才报错
+            if (currentSecurity !== 'OPEN' && !password) {
+                showResultModal('提示', '请输入 WiFi 密码');
+                return;
+            }
             
             // 显示加载状态
             const btn = document.querySelector('#wifiInputGroup button');

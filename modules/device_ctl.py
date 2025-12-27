@@ -108,27 +108,40 @@ class DeviceManager:
             return False, f"SSH 错误: {str(e)}"
 
     def power_control(self, device_id, action):
-        dev = next((d for d in self.devices if str(d['id']) == str(device_id)), None)
-        if not dev: return False, "设备不存在"
+            dev = next((d for d in self.devices if str(d['id']) == str(device_id)), None)
+            if not dev: return False, "设备不存在"
 
-        if action == 'wake':
-            if not dev['mac']: return False, "MAC 地址未知"
-            send_magic_packet(dev['mac'])
-            return True, "WOL 信号已发送"
-        
-        if not dev.get('ssh_user'): return False, "SSH 未配置"
+            # --- 修改区域开始 ---
+            if action == 'wake':
+                if not dev['mac']: return False, "MAC 地址未知"
+                
+                try:
+                    # 方案 A: 使用 etherwake 强制指定 eth0 接口发送 (针对直连最稳)
+                    # 注意: 需要树莓派安装 etherwake (sudo apt install etherwake)
+                    subprocess.run(['sudo', 'etherwake', '-i', 'eth0', dev['mac']], check=True)
+                    return True, "WOL 信号已通过 eth0 接口发送"
+                except Exception as e:
+                    # 方案 B: 如果 etherwake 失败 (比如没装软件)，回退到原来的广播模式
+                    try:
+                        send_magic_packet(dev['mac'])
+                        return True, "Etherwake 失败，已使用普通广播模式发送"
+                    except Exception as e2:
+                        return False, f"WOL 发送失败: {str(e)} / {str(e2)}"
+            # --- 修改区域结束 ---
+            
+            if not dev.get('ssh_user'): return False, "SSH 未配置"
 
-        cmd = "shutdown /s /t 0" if action == 'shutdown' else "shutdown /r /t 0"
-        
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        try:
-            ssh.connect(dev['ip'], username=dev['ssh_user'], password=dev['ssh_pass'], timeout=3)
-            ssh.exec_command(cmd)
-            ssh.close()
-            return True, f"指令 {action} 发送成功"
-        except Exception as e:
-            return False, f"SSH 失败: {str(e)}"
+            cmd = "shutdown /s /t 0" if action == 'shutdown' else "shutdown /r /t 0"
+            
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            try:
+                ssh.connect(dev['ip'], username=dev['ssh_user'], password=dev['ssh_pass'], timeout=3)
+                ssh.exec_command(cmd)
+                ssh.close()
+                return True, f"指令 {action} 发送成功"
+            except Exception as e:
+                return False, f"SSH 失败: {str(e)}"
 
     def resolve_mac(self, ip):
         try:
